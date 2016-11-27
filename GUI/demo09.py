@@ -1,6 +1,7 @@
 # coding=utf-8
 # Author:   Lixinming
 import datetime
-print datetime.datetime.now()
 import os
+print datetime.datetime.now()
 print os._Environ
+
