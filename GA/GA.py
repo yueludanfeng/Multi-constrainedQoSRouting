@@ -12,7 +12,7 @@ class Graph:
     def __init__(self, node_num=0, edge_num=0):
         self.node_num = node_num
         self.edge_num = edge_num
-        self.connection_status = [[0 for col in range(self.node_num)] for row in range(self.node_num)]
+        self.connection_status = [[False for col in range(self.node_num)] for row in range(self.node_num)]
         self.bandwidth = [[0 for col in range(self.node_num)] for row in range(self.node_num)]
         self.delay = [[0 for col in range(self.node_num)] for row in range(self.node_num)]
         self.cost = [[0 for col in range(self.node_num)] for row in range(self.node_num)]
@@ -46,7 +46,7 @@ class Graph:
         self.delay[rownum][colnum] = value
         self.delay[colnum][rownum] = value
 
-    def add_edge_measure(self, rownum, colnum, bandwidth = 0, delay = 0, cost = 0):
+    def add_edge_measure(self, rownum, colnum, bandwidth, delay, cost):
         self.add_bandwidth(rownum, colnum, bandwidth)
         self.add_delay(rownum, colnum, delay)
         self.add_cost(rownum, colnum, cost)
@@ -81,7 +81,7 @@ class Graph:
     def init_node_adjs(self):
         for row_num in range(self.node_num):
             for col_num in range(self.node_num):
-                if self.connection_status[row_num][col_num] == 1:
+                if self.connection_status[row_num][col_num]:
                     self.node_adjs[row_num].append(col_num)
         print self.node_adjs
 
@@ -99,7 +99,9 @@ class Chromosome:
     def set_fitness(self, value):
         self.fitness = value
 
-    def set_solution(self, solution=[]):
+    def set_solution(self, solution=None):
+        if solution is None:
+            solution = []
         self.solution = solution
 
     def get_solution(self):
@@ -120,19 +122,46 @@ class Chromosome:
         print 'cost=',total_cost
         return total_cost
 
-    def calculate_fitness(self, graph, delay_w=0, r=0.5, k1=1):
+    def calculate_fitness(self, graph, delay_w):
+        C = 30
         i = 0
         path_length = len(self.solution)
-        sum_delay = 100
+        sum_delay = 0
         sum_cost = 0
-        while i < path_length-1:
+        while i < path_length - 1:
             tmp_delay = graph.get_delay()
             tmp_cost = graph.get_cost()
+            sum_delay += tmp_delay[self.solution[i]][self.solution[i + 1]]
+            sum_cost += tmp_cost[self.solution[i]][self.solution[i + 1]]
+            i += 1
+        print 'delay_w = ',delay_w
+        print 'sum_delay = ',sum_delay
+        delta_sum_delay = delay_w - sum_delay
+        print '-------------delta_sum_delay=',delta_sum_delay
+        print '----delta_sum_delay>=0  ',(C-sum_cost) * np.math.log10(10+delta_sum_delay)
+        self.fitness = (C-sum_cost) * np.math.log10(10+delta_sum_delay)
+        #if delta_sum_delay < 0:
+        #    print 'np.math.exp(delta_sum_delay)=',np.math.exp(delta_sum_delay)
+        #    self.fitness = np.math.exp(delta_sum_delay)
+        #else:
+        #    # print '----delta_sum_delay>=0  ',np.math.exp(C-sum_cost) * np.math.log10(10+delta_sum_delay)
+        #    # self.fitness = np.math.exp(C-sum_cost) * np.math.log10(10+delta_sum_delay)
+        #    print '----delta_sum_delay>=0  ',(C-sum_cost) * np.math.log10(10+delta_sum_delay)
+        #    self.fitness = (C-sum_cost) * np.math.log10(10+delta_sum_delay)
+
+    def calculate_fitness_old(self, graph, delay_w, r=0.5, k1=1.0):
+        i = 0
+        path_length = len(self.solution)
+        sum_delay = 0
+        sum_cost = 0
+        tmp_delay = graph.get_delay()
+        tmp_cost = graph.get_cost()
+        while i < path_length-1:
             sum_delay += tmp_delay[self.solution[i]][self.solution[i+1]]
             sum_cost += tmp_cost[self.solution[i]][self.solution[i+1]]
             i += 1
         delta_sum_delay = delay_w - sum_delay
-
+        print 'delta_sum_delay=',delta_sum_delay
         if delta_sum_delay <= 0:
             delta_sum_delay = r
         fz = k1 * delta_sum_delay
@@ -241,6 +270,58 @@ class Chromosome:
         print self.solution
         return self
 
+    # 尽量往好的方向变异
+    def find_path_new(self, graph, mutate_node):
+        print '---------------enter into find_path_new-------'
+        print 'mutate_node=',mutate_node
+        solution_len = len(self.solution)
+        # 变异结点的索引（下标）
+        mutate_node_index = self.solution.index(mutate_node)
+        previous_node = self.solution[mutate_node_index-1]
+        candidate = []
+        for node in range(graph.node_num):
+            if (node != mutate_node and graph.get_connection_status(node, previous_node)) or (node == previous_node):
+                candidate.append(node)
+        if len(candidate) == 0:
+            return self.solution
+        current_node = choice(candidate)
+        found = False
+        tmp_solution = self.solution[0:mutate_node_index]
+        if current_node == self.solution[solution_len-1]:
+            tmp_solution.append(current_node)
+            return tmp_solution
+        node_adjs = graph.get_node_adjs()
+        while not found:
+            tmp_solution.append(current_node)
+            for node in self.solution[-1:mutate_node_index:-1]:
+                if graph.get_connection_status(node, current_node):
+                    found = True
+                    node_index = self.solution.index(node)
+                    tmp_solution += self.solution[node_index:]
+                    # tmp_solution.append(self.solution[solution_len - 1])
+                    break
+            if found:
+                chromosome = Chromosome()
+                chromosome.set_solution(tmp_solution)
+                chromosome.calculate_fitness(graph, Population.delay_w)
+                if chromosome.get_fitness() <= self.get_fitness():
+                    return self.solution
+                else:
+                    return tmp_solution
+            else:
+                # 更新next_node,与next_node相邻而且没有访问过的结点
+                current_node_adjs = []
+                for node in node_adjs[current_node]:
+                    if node > current_node:
+                        current_node_adjs.append(node)
+                if len(current_node_adjs) == 0:
+                    return self.solution
+                # 当前结点的相邻而未访问过的结点如果存在
+                else:
+                    current_node = choice(current_node_adjs)
+        # default return value
+        return self.solution
+
     # 根据graph和变异结点，返回新的解solution
     def find_path(self, graph, mutate_node):
         print '---------------enter into find_path-------'
@@ -277,8 +358,8 @@ class Chromosome:
                 if graph.get_connection_status(node, current_node):
                     found = True
                     node_index = self.solution.index(node)
-                    tmp_solution += self.solution[node_index:-1]
-                    tmp_solution.append(self.solution[solution_len - 1])
+                    tmp_solution += self.solution[node_index:]
+                    # tmp_solution.append(self.solution[solution_len - 1])
                     break
             if found:
                 return tmp_solution
@@ -300,7 +381,7 @@ class Chromosome:
         print '----------------------------enter into Chromosome mutate-----------'
         random_p = random()
         if random_p > pm:
-            return self
+            return
         # 可能会变异的结点
         node_may_be_mutated = []
         solution_len = len(self.solution)
@@ -312,9 +393,11 @@ class Chromosome:
         # 随机选择一个作为变异结点
         print 'node_may_be_mutated=',node_may_be_mutated
         if len(node_may_be_mutated) == 0:
-            return self
+            return
         mutate_node = choice(node_may_be_mutated)
         self.solution = self.find_path(graph, mutate_node)
+        # self.solution = self.find_path_new(graph, mutate_node)
+        self.solve_loop(graph)
 
 
 # 种群
@@ -322,8 +405,9 @@ class Population:
     # DFS variation : 随机选择临接结点
     @staticmethod
     def random_chromosome(graph, src_node, des_node):
+        print 'enter into random_chromosome'
         visited = [src_node]
-        tabu = [i for i in range(graph.node_num)]
+        tabu = [n for n in range(graph.node_num)]
         tabu.remove(src_node)
         tabu_bak = tabu
         # 当前结点（位置）
@@ -331,39 +415,61 @@ class Population:
         # 下一个随机的相邻结点(位置)
         next_node = -1
         flag = False
-        while len(tabu)> 0:
+        print 'aaaaaaaaa'
+        print 'src_node', src_node
+        print 'des_node', des_node
+        while len(tabu) > 0:
+            print 'bbbbbbbb'
             # 当前结点的未访问的相邻结点列表
             adj_node_unvisited_list = []
             # 找到与current_node相邻结点中随机一个结点
-            for i in range(graph.node_num):
+            for node in range(graph.node_num):
                 # 如果相邻结点还没有访问过，就加入带访问列表
-                if graph.connection_status[current_node][i] == 1 and i in tabu:
-                    adj_node_unvisited_list.append(i)
+                print '--------',node
+                if graph.connection_status[current_node][node]:
+                    print 'node=' ,node
+                    print 'tabu=' ,tabu
+                    if node in tabu:
+                        print '-------append-----'
+                        adj_node_unvisited_list.append(node)
+                        print adj_node_unvisited_list
+                    print '-------------not empty-------'
                 else:
+                    print '------continue----'
                     continue
             length = len(adj_node_unvisited_list)
+            # 有相邻结点
             if length > 0:
                 # next_node = adj_node_unvisited_list[randint(0, length-1)]
                 next_node = choice(adj_node_unvisited_list)
+                print 'next_node',next_node
+
                 tabu.remove(next_node)
                 visited.append(next_node)
+                previous_node = current_node
                 current_node = next_node
                 if current_node == des_node:
                     flag = True
                     break
+            # 没有相邻结点
             else:
+                print 'cccccccc'
+                current_node = previous_node
                 # 重来一次
-                visited = [src_node]
-                tabu = tabu_bak
+                # visited = [src_node]
+                # tabu = tabu_bak
             next_node = -1
         if flag:
             return visited
         return None
 
-    def __init__(self, graph, src_node, des_node, pop_scale, pc=0.9, pm=0.1, delay_w = 15):
-        self.delay_w = delay_w
+    delay_w = 15
+    pc = 0.9
+    pm = 0.1
+    def __init__(self, graph, src_node, des_node, pop_scale, pc, pm, delay_w):
         self.pc = pc
         self.pm = pm
+        self.delay_w = delay_w
         # 为何要定义一个graph，是因为用到的地方有多出，每次都从外面传进来，嫌麻烦，干脆自己定义一个成员变量算啦
         self.graph = graph
         # 种群规模
@@ -393,6 +499,7 @@ class Population:
 
     # 计算适应度函数 F = ((Bw-B) + (D-Dw))/cost
     # 计算每一个个体的适应度值并记录最佳适应度值的个体
+    # F = (C-cost) * {C1 - lg(Lw -[1-π(1 - LRi)])} * lg(Dw - D +10)
     def calculate_fitness(self):
         # 对种群中每个个体 计算适应度
         sum_fitness = 0
@@ -408,6 +515,11 @@ class Population:
         if self.best_fitness < chromosome.get_fitness():
             self.best_fitness = chromosome.get_fitness()
             self.best_solution = chromosome.get_solution()
+        else:
+            chromosome = Chromosome()
+            chromosome.set_solution(self.best_solution)
+            chromosome.set_fitness(self.best_fitness)
+            self.chromosomes[self.pop_size-1] = chromosome
 
     # 选择pop_size-1个个体，加上最佳适应度个体，放入交配池，为遗传操作做准备
     def choose(self):
@@ -500,7 +612,9 @@ class Population:
 if __name__ == '__main__':
     # 图形初始化
     starttime = clock()
-    f = open('test01.txt','r')
+    # f = open('test01.txt','r')
+    # f = open('test02.txt', 'r')
+    f = open('test03.txt','r')
     line = f.readline().split()
     print line
     node_num = int(line[0])
@@ -508,6 +622,14 @@ if __name__ == '__main__':
     print node_num
     print edge_num
     graph = Graph(node_num, edge_num)
+    f.readline()
+    line = f.readline().split()
+    src = int(line[0])
+    dst = int(line[1])
+    pop_scale = int(line[2])
+    pc = float(line[3])
+    pm = float(line[4])
+    delay_w = int(line[5])
     # (row_num, col_num, BandWidth, Delay, Cost)
     # param_length会随着的参数的增加而增大
     param_length = 5
@@ -516,18 +638,31 @@ if __name__ == '__main__':
     print graph.cost
     # print graph.bandwidth[0][1]
     # print graph.cost[0][1]
+
     # 种群初始化
-    # 源点
-    src = 0
-    # 终点
-    dst = 4
-    # 种群规模
-    pop_scale = 6
-    # 交叉概率
-    pc = 0.5
-    # 变异概率
-    pm = 0.01
-    population = Population(graph, src, dst, pop_scale, pc, pm)
+    # test01.txt
+    # # 源点
+    # src = 0
+    # # 终点
+    # dst = 4
+    # # 种群规模
+    # pop_scale = 6
+    # # 交叉概率
+    # pc = 0.99
+    # # 变异概率
+    # pm = 0.002
+    # #时延约束
+    # delay_w = 15
+
+    # test02.txt
+    # src = 0
+    # dst = 5
+    # pop_scale = 20
+    # pc = 0.9
+    # pm = 0.001
+    # #时延约束
+    # delay_w = 8
+    population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
     pop_size = population.get_popsize()
     print 'pop_size=', pop_size
 
@@ -540,31 +675,32 @@ if __name__ == '__main__':
     count = 0
     TIME = 10000000
     sum_generation = 0
-    for times in range(TIME):
-        while generations < MAX_GENERATION:
-            print '--------------------generations=>>>>>', generations, '<<<<--------------'
-            # 计算种群中所以个体的适应度值
-            population.calculate_fitness()
-            for i in range(pop_size):
-                # s1 = Population.random_chromosome(graph, 0, 4)
-                s1 = population.chromosomes[i]
-                print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
-            population.choose()
-            population.crossover()
-            population.mutate()
-            population.update()
-            population.calculate_fitness()
-            avg_fitness = population.avg_fitness
-            avg_fitnesses.append(avg_fitness*100)
-            best_fitnesses.append(population.get_best_fitness()*100)
-            best_chromosome = Chromosome()
-            best_chromosome.set_solution(population.best_solution)
-            min_costs.append(best_chromosome.get_total_cost(graph))
-            if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
-                sum_generation += generations
-                flag = False
-            generations += 1
-    print 'average generation of finding optimal solution is %f' % (sum_generation*1.0 / TIME)
+    # for times in range(TIME):
+    population.calculate_fitness()
+    while generations < MAX_GENERATION:
+        print '--------------------generations=>>>>>', generations, '<<<<--------------'
+        # 计算种群中所以个体的适应度值
+        # population.calculate_fitness()
+        for i in range(pop_size):
+            # s1 = Population.random_chromosome(graph, 0, 4)
+            s1 = population.chromosomes[i]
+            print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
+        population.choose()
+        population.crossover()
+        population.mutate()
+        population.update()
+        population.calculate_fitness()
+        avg_fitness = population.avg_fitness
+        avg_fitnesses.append(avg_fitness*100)
+        best_fitnesses.append(population.get_best_fitness()*100)
+        best_chromosome = Chromosome()
+        best_chromosome.set_solution(population.best_solution)
+        min_costs.append(best_chromosome.get_total_cost(graph))
+        if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
+            sum_generation += generations
+            flag = False
+        generations += 1
+    # print 'average generation of finding optimal solution is %f' % (sum_generation*1.0 / TIME)
     # long running
     endtime = clock()
     # 只计算程序运行的CPU时间
@@ -573,7 +709,7 @@ if __name__ == '__main__':
     y = best_fitnesses
     z = avg_fitnesses
     u = min_costs
-    pl.figure('3 nodes 7 edges')
+    # pl.figure('3 nodes 7 edges')
     pl.subplot(211)
     # pl.xlabel('generation')
     pl.ylabel('fitness')
