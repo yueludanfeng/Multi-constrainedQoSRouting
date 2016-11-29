@@ -3,3 +3,5 @@ The Algorithms are as follows :
     GA(Genetic Algorithm)
     ACO(Ant Colony Optimization)
     GA-ACO(Genetic Algorithm-Ant Colony Optimization)
+
+刚开始，fitness都是54000，挺大的，

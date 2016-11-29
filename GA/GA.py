@@ -143,8 +143,13 @@ class Chromosome:
         print '-------------delta_sum_delay=',delta_sum_delay
         # print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
         # self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-        print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) + log10(graph.total_delay+delta_sum_delay)
-        self.fitness = (graph.total_cost-sum_cost) + log10(graph.total_delay+delta_sum_delay)
+        if delta_sum_delay > 0:
+            print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+            self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        else:
+             print '----delta_sum_delay<0  ', (graph.total_cost-sum_cost) / 2
+             self.fitness = (graph.total_cost-sum_cost) / 2
+
         #if delta_sum_delay < 0:
         #if delta_sum_delay < 0:
         #    print 'np.math.exp(delta_sum_delay)=',np.math.exp(delta_sum_delay)
@@ -554,7 +559,7 @@ class Population:
             for int_i in range(self.pop_size):
                 total_fitness += self.chromosomes[int_i].get_fitness()
             for int_i in range(self.pop_size):
-                sum_fitness += self.chromosomes[int_i].get_fitness()/total_fitness
+                sum_fitness += self.chromosomes[int_i].get_fitness() *1.0 /total_fitness
                 print 'sum_fitness=',sum_fitness
                 if tmp_random <= sum_fitness:
                     print 'tmp_random=',tmp_random,';sum_fitness=',sum_fitness
@@ -687,35 +692,40 @@ if __name__ == '__main__':
     min_costs = []
     flag = True
     count = 0
-    TIME = 10000000
+    TIME = 100
     sum_generation = 0
-    # for times in range(TIME):
-    population.calculate_fitness()
-    while generations < MAX_GENERATION:
-        print '--------------------generations=>>>>>', generations, '<<<<--------------'
-        # 计算种群中所以个体的适应度值
-        # population.calculate_fitness()
-        for i in range(pop_size):
-            # s1 = Population.random_chromosome(graph, 0, 4)
-            s1 = population.chromosomes[i]
-            print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
-        population.choose()
-        population.crossover()
-        population.mutate()
-        population.update()
+    ratio = 0
+    for times in range(TIME):
         population.calculate_fitness()
-        avg_fitness = population.avg_fitness
-        avg_fitnesses.append(avg_fitness)
-        best_fitnesses.append(population.get_best_fitness())
-        best_chromosome = Chromosome()
-        best_chromosome.set_solution(population.best_solution)
-        min_cost = best_chromosome.get_total_cost(graph)
-        min_costs.append(min_cost)
-        # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
-        #     sum_generation += generations
-        #     flag = False
+        while generations < MAX_GENERATION:
+            print '--------------------generations=>>>>>', generations, '<<<<--------------'
+            # 计算种群中所以个体的适应度值
+            # population.calculate_fitness()
+            for i in range(pop_size):
+                # s1 = Population.random_chromosome(graph, 0, 4)
+                s1 = population.chromosomes[i]
+                print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
+            population.choose()
+            population.crossover()
+            population.mutate()
+            population.update()
+            population.calculate_fitness()
+            avg_fitness = population.avg_fitness
+            avg_fitnesses.append(avg_fitness)
+            best_fitnesses.append(population.get_best_fitness())
+            best_chromosome = Chromosome()
+            best_chromosome.set_solution(population.best_solution)
+            min_cost = best_chromosome.get_total_cost(graph)
+            min_costs.append(min_cost)
+            # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
+            #     sum_generation += generations
+            #     flag = False
+        if fabs(min_cost - 13) < 1e-2:
+            ratio += 1
         generations += 1
+
     # print 'average generation of finding optimal solution is %f' % (sum_generation*1.0 / TIME)
+    print 'average ratio of finding optimal solution is %f' % (ratio * 1.0)
     # long running
     endtime = clock()
     # 只计算程序运行的CPU时间
@@ -724,7 +734,10 @@ if __name__ == '__main__':
     y = best_fitnesses
     z = avg_fitnesses
     u = min_costs
-    pl.figure('node_num=%d, edge_num=%d, pop_scale=%d, pc=%f, pm=%f, global_min_cost=%d, best_solution=%s' % (node_num, edge_num, pop_scale, pc, pm, min_cost, population.best_solution))
+    info = 'node_num=%d, edge_num=%d, pop_scale=%d, pc=%f, pm=%f, global_min_cost=%d,' \
+           ' best_solution=%s, ration of find optimal solution is %f ' \
+           % (node_num, edge_num, pop_scale, pc, pm, min_cost, population.best_solution, ratio)
+    pl.figure(info)
     pl.subplot(211)
     # pl.xlabel('generation')
     pl.ylabel('fitness')

@@ -35,3 +35,6 @@ s.append(1)
 s.append(2)
 print s.pop()
 print s.pop()
+print '--------------'
+print 1e-6
+print 1.0e-7
