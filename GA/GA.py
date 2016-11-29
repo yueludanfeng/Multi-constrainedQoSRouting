@@ -706,10 +706,11 @@ if __name__ == '__main__':
         best_fitnesses.append(population.get_best_fitness()*100)
         best_chromosome = Chromosome()
         best_chromosome.set_solution(population.best_solution)
-        min_costs.append(best_chromosome.get_total_cost(graph))
-        if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
-            sum_generation += generations
-            flag = False
+        min_cost = best_chromosome.get_total_cost(graph)
+        min_costs.append(min_cost)
+        # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
+        #     sum_generation += generations
+        #     flag = False
         generations += 1
     # print 'average generation of finding optimal solution is %f' % (sum_generation*1.0 / TIME)
     # long running
@@ -720,7 +721,7 @@ if __name__ == '__main__':
     y = best_fitnesses
     z = avg_fitnesses
     u = min_costs
-    # pl.figure('3 nodes 7 edges')
+    pl.figure('node_num=%d, edge_num=%d, pop_scale=%d, pc=%f, pm=%f, global_min_cost=%d, best_solution=%s' % (node_num, edge_num, pop_scale, pc, pm, min_cost, population.best_solution))
     pl.subplot(211)
     # pl.xlabel('generation')
     pl.ylabel('fitness')
