@@ -127,7 +127,6 @@ class Chromosome:
         return total_cost
 
     def calculate_fitness(self, graph, delay_w):
-        C = 30
         i = 0
         path_length = len(self.solution)
         sum_delay = 0
@@ -138,12 +137,12 @@ class Chromosome:
             sum_delay += tmp_delay[self.solution[i]][self.solution[i + 1]]
             sum_cost += tmp_cost[self.solution[i]][self.solution[i + 1]]
             i += 1
-        print 'delay_w = ',delay_w
-        print 'sum_delay = ',sum_delay
+        print 'delay_w = ', delay_w
+        print 'sum_delay = ', sum_delay
         delta_sum_delay = delay_w - sum_delay
         print '-------------delta_sum_delay=',delta_sum_delay
-        print '----delta_sum_delay>=0  ',(C-sum_cost) * log10(200+delta_sum_delay)
-        self.fitness = (C-sum_cost) * log10(200+delta_sum_delay)
+        print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
         #if delta_sum_delay < 0:
         #    print 'np.math.exp(delta_sum_delay)=',np.math.exp(delta_sum_delay)
         #    self.fitness = np.math.exp(delta_sum_delay)
