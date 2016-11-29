@@ -141,8 +141,11 @@ class Chromosome:
         print 'sum_delay = ', sum_delay
         delta_sum_delay = delay_w - sum_delay
         print '-------------delta_sum_delay=',delta_sum_delay
-        print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-        self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        # print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        # self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) + log10(graph.total_delay+delta_sum_delay)
+        self.fitness = (graph.total_cost-sum_cost) + log10(graph.total_delay+delta_sum_delay)
+        #if delta_sum_delay < 0:
         #if delta_sum_delay < 0:
         #    print 'np.math.exp(delta_sum_delay)=',np.math.exp(delta_sum_delay)
         #    self.fitness = np.math.exp(delta_sum_delay)
@@ -702,8 +705,8 @@ if __name__ == '__main__':
         population.update()
         population.calculate_fitness()
         avg_fitness = population.avg_fitness
-        avg_fitnesses.append(avg_fitness*100)
-        best_fitnesses.append(population.get_best_fitness()*100)
+        avg_fitnesses.append(avg_fitness)
+        best_fitnesses.append(population.get_best_fitness())
         best_chromosome = Chromosome()
         best_chromosome.set_solution(population.best_solution)
         min_cost = best_chromosome.get_total_cost(graph)
