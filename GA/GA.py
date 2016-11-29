@@ -1,6 +1,6 @@
 # coding=utf-8
-import numpy as np
 from math import fabs
+from math import log10
 import matplotlib.pyplot as pl
 from operator import attrgetter
 from random import choice
@@ -17,6 +17,8 @@ class Graph:
         self.delay = [[0 for col in range(self.node_num)] for row in range(self.node_num)]
         self.cost = [[0 for col in range(self.node_num)] for row in range(self.node_num)]
         self.node_adjs = {r:[] for r in range(self.node_num)}
+        self.total_cost = 0
+        self.total_delay= 0
 
     def get_node_adjs(self):
         return self.node_adjs
@@ -41,10 +43,12 @@ class Graph:
     def add_cost(self, rownum, colnum, value = 0):
         self.cost[rownum][colnum] = value
         self.cost[colnum][rownum] = value
+        self.total_cost += value
 
     def add_delay(self, rownum, colnum, value = 0):
         self.delay[rownum][colnum] = value
         self.delay[colnum][rownum] = value
+        self.total_delay += value
 
     def add_edge_measure(self, rownum, colnum, bandwidth, delay, cost):
         self.add_bandwidth(rownum, colnum, bandwidth)
@@ -138,8 +142,8 @@ class Chromosome:
         print 'sum_delay = ',sum_delay
         delta_sum_delay = delay_w - sum_delay
         print '-------------delta_sum_delay=',delta_sum_delay
-        print '----delta_sum_delay>=0  ',(C-sum_cost) * np.math.log10(10+delta_sum_delay)
-        self.fitness = (C-sum_cost) * np.math.log10(10+delta_sum_delay)
+        print '----delta_sum_delay>=0  ',(C-sum_cost) * log10(200+delta_sum_delay)
+        self.fitness = (C-sum_cost) * log10(200+delta_sum_delay)
         #if delta_sum_delay < 0:
         #    print 'np.math.exp(delta_sum_delay)=',np.math.exp(delta_sum_delay)
         #    self.fitness = np.math.exp(delta_sum_delay)
@@ -418,6 +422,8 @@ class Population:
         print 'aaaaaaaaa'
         print 'src_node', src_node
         print 'des_node', des_node
+        # 定义栈用于回溯
+        stack = []
         while len(tabu) > 0:
             print 'bbbbbbbb'
             # 当前结点的未访问的相邻结点列表
@@ -446,20 +452,26 @@ class Population:
 
                 tabu.remove(next_node)
                 visited.append(next_node)
-                previous_node = current_node
+                stack.append(current_node)
                 current_node = next_node
+                print 'find a adj node, current_node=',current_node
                 if current_node == des_node:
                     flag = True
                     break
             # 没有相邻结点
             else:
                 print 'cccccccc'
-                current_node = previous_node
+                print 'current_node=', current_node
+                print 'visited=',visited
+                visited.remove(current_node)
+                current_node = stack.pop()
                 # 重来一次
                 # visited = [src_node]
                 # tabu = tabu_bak
             next_node = -1
         if flag:
+            print '------------find a valid path------'
+            print visited
             return visited
         return None
 
