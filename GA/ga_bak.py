@@ -144,13 +144,13 @@ class Chromosome:
         delta_sum_delay = delay_w - sum_delay
         print '-------------delta_sum_delay=',delta_sum_delay
         # print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-        # self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-        if delta_sum_delay > 0:
-            print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-            self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-        else:
-             print '----delta_sum_delay<0  ', (graph.total_cost-sum_cost) / 2
-             self.fitness = (graph.total_cost-sum_cost) / 2
+        self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        # if delta_sum_delay > 0:
+        #     print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        #     self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        # else:
+        #      print '----delta_sum_delay<0  ', (graph.total_cost-sum_cost) / 2
+        #      self.fitness = (graph.total_cost-sum_cost) / 2
 
         #if delta_sum_delay < 0:
         #if delta_sum_delay < 0:
