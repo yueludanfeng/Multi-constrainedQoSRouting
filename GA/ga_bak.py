@@ -325,6 +325,7 @@ class Chromosome:
                 # 更新next_node,与next_node相邻而且没有访问过的结点
                 current_node_adjs = []
                 for node in node_adjs[current_node]:
+                    print '--------enter into find path new-----'
                     if node > current_node:
                         current_node_adjs.append(node)
                 if len(current_node_adjs) == 0:
@@ -487,6 +488,7 @@ class Population:
     delay_w = 15
     pc = 0.9
     pm = 0.1
+
     def __init__(self, graph, src_node, des_node, pop_scale, pc, pm, delay_w):
         self.pc = pc
         self.pm = pm
@@ -561,7 +563,7 @@ class Population:
             for int_i in range(self.pop_size):
                 total_fitness += self.chromosomes[int_i].get_fitness()
             for int_i in range(self.pop_size):
-                sum_fitness += self.chromosomes[int_i].get_fitness()/total_fitness
+                sum_fitness += self.chromosomes[int_i].get_fitness()*1.0/total_fitness
                 print 'sum_fitness=',sum_fitness
                 if tmp_random <= sum_fitness:
                     print 'tmp_random=',tmp_random,';sum_fitness=',sum_fitness
@@ -655,6 +657,9 @@ if __name__ == '__main__':
     # param_length会随着的参数的增加而增大
     param_length = 5
     graph.init_edge_measure(f, param_length)
+    graph.init_node_adjs()
+    print '----------node_adjs----------'
+    print graph.get_node_adjs()
     print '------------------->graph.cost<------------'
     print graph.cost
     # print graph.bandwidth[0][1]
@@ -697,35 +702,31 @@ if __name__ == '__main__':
     TIME = 1000
     sum_generation = 0
     ratio = 0
-    for times in range(TIME):
+    population.calculate_fitness()
+    while generations < MAX_GENERATION:
+        print '--------------------generations=>>>>>', generations, '<<<<--------------'
+        # 计算种群中所以个体的适应度值
+        # population.calculate_fitness()
+        for i in range(pop_size):
+            # s1 = Population.random_chromosome(graph, 0, 4)
+            s1 = population.chromosomes[i]
+            print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
+        population.choose()
+        population.crossover()
+        population.mutate()
+        population.update()
         population.calculate_fitness()
-        while generations < MAX_GENERATION:
-            print '--------------------generations=>>>>>', generations, '<<<<--------------'
-            # 计算种群中所以个体的适应度值
-            # population.calculate_fitness()
-            for i in range(pop_size):
-                # s1 = Population.random_chromosome(graph, 0, 4)
-                s1 = population.chromosomes[i]
-                print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
-            population.choose()
-            population.crossover()
-            population.mutate()
-            population.update()
-            population.calculate_fitness()
-            avg_fitness = population.avg_fitness
-            avg_fitnesses.append(avg_fitness)
-            best_fitnesses.append(population.get_best_fitness())
-            best_chromosome = Chromosome()
-            best_chromosome.set_solution(population.best_solution)
-            min_cost = best_chromosome.get_total_cost(graph)
-            min_costs.append(min_cost)
-            # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
-            #     sum_generation += generations
-            #     flag = False
-            if min_cost == 13:
-                ratio += 1
-            generations += 1
-    print 'ratio of finding optimal solution is %f' % (ratio / TIME)
+        avg_fitness = population.avg_fitness
+        avg_fitnesses.append(avg_fitness)
+        best_fitnesses.append(population.get_best_fitness())
+        best_chromosome = Chromosome()
+        best_chromosome.set_solution(population.best_solution)
+        min_cost = best_chromosome.get_total_cost(graph)
+        min_costs.append(min_cost)
+        # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
+        #     sum_generation += generations
+        #     flag = False
+        generations += 1
     # long running
     endtime = clock()
     # 只计算程序运行的CPU时间
