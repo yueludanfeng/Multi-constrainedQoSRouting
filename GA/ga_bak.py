@@ -1,13 +1,18 @@
 # coding=utf-8
-# Author:   Lixinming
+# Author:   Li xinming
 # coding=utf-8
 from math import fabs
 from math import log10
+from math import pow
 import matplotlib.pyplot as pl
 from operator import attrgetter
 from random import choice
 from random import random
 from time import clock
+from sys import stdout
+# 输出重定向至指定的文件中，便于查看
+file_obj = open('out.txt', 'a+')
+stdout = file_obj
 
 
 class Graph:
@@ -124,6 +129,7 @@ class Chromosome:
         cost_matrix = graph.get_cost()
         # for node_num in self.solution[0:solution_len-1]:
         for k in range(solution_len-1):
+            print 'cost[k][k+1]=',cost_matrix[self.solution[k]][self.solution[k+1]]
             total_cost += cost_matrix[self.solution[k]][self.solution[k+1]]
         print 'cost=',total_cost
         return total_cost
@@ -143,6 +149,17 @@ class Chromosome:
         print 'sum_delay = ', sum_delay
         delta_sum_delay = delay_w - sum_delay
         print '-------------delta_sum_delay=',delta_sum_delay
+        if delta_sum_delay >= 0:
+            self.fitness = (graph.total_cost-sum_cost) *\
+                           log10(graph.total_delay+delta_sum_delay)
+        else:
+            self.fitness = pow(graph.total_cost - sum_cost, 0.5) * \
+                            log10(graph.total_delay+delta_sum_delay)
+
+        # if delta_sum_delay > 0:
+        #     self.fitness = delta_sum_delay/sum_cost
+        # else:
+        #     self.fitness = sum_cost / 2
         # print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
         self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
         # if delta_sum_delay > 0:
@@ -162,7 +179,7 @@ class Chromosome:
         #    print '----delta_sum_delay>=0  ',(C-sum_cost) * np.math.log10(10+delta_sum_delay)
         #    self.fitness = (C-sum_cost) * np.math.log10(10+delta_sum_delay)
 
-    def calculate_fitness_old(self, graph, delay_w, r=0.5, k1=1.0):
+    def calculate_fitness_old(self, graph, delay_w, r=0.5, k1=100.0):
         i = 0
         path_length = len(self.solution)
         sum_delay = 0
@@ -175,12 +192,16 @@ class Chromosome:
             i += 1
         delta_sum_delay = delay_w - sum_delay
         print 'delta_sum_delay=',delta_sum_delay
-        if delta_sum_delay <= 0:
-            delta_sum_delay = r
-        fz = k1 * delta_sum_delay
-        print fz/sum_cost
+        if delta_sum_delay >= 0:
+            self.fitness = 1.0 * k1 / sum_cost
+        else:
+            self.fitness = 1.0 * k1 / (3*sum_cost)
+        # if delta_sum_delay <= 0:
+        #     delta_sum_delay = r
+        # fz = k1 * delta_sum_delay
+        # print fz/sum_cost
         # 之前fitness没有在此处赋值，导致每个个体的适应度值总是为0
-        self.fitness = fz/sum_cost
+        # self.fitness = fz/sum_cost
 
     def crossover(self, chromosome2, graph, pc):
         print '----------------------------enter into cross function of Chromosome-----------------'
@@ -637,7 +658,7 @@ if __name__ == '__main__':
     starttime = clock()
     # f = open('test01.txt','r')
     # f = open('test02.txt', 'r')
-    f = open('test03.txt','r')
+    f = open('test03.txt', 'r')
     line = f.readline().split()
     print line
     node_num = int(line[0])

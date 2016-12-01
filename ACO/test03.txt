@@ -1,6 +1,6 @@
 20 37
-#src    dst     scale       pc      pm      dealy_w
-0       19       50        0.99      0.001     50
+#src    dst     ant_num    dealy_w
+0       19      50      50
 0,1,80,9,9
 0,2,80,3,2
 0,3,80,18,7
