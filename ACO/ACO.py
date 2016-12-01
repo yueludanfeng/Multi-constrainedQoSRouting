@@ -132,6 +132,7 @@ class Ant:
     # 选择下一个城市（结点）
     def choose_next_city(self):
 
+
         # 计算路径迁移概率
         transe_p = [0 for i in range(GlobalInfo.node_num)]
 
