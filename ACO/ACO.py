@@ -103,16 +103,6 @@ class GlobalInfo:
     pheromone = None
     delta_pheromone = None
 
-    @staticmethod
-    def init_param(node_num, edge_num, src_node, dst_node, ant_num, delay_w):
-        GlobalInfo.node_num = node_num
-        GlobalInfo.edge_num = edge_num
-        GlobalInfo.src_node = src_node
-        GlobalInfo.dst_node = dst_node
-        GlobalInfo.ant_num = ant_num
-        GlobalInfo.delay_w = delay_w
-
-
     def __init__(self):
         # 全局信息素矩阵初始`化
         GlobalInfo.pheromone = [[GlobalInfo.C for col in range(GlobalInfo.node_num)] for row in range(GlobalInfo.node_num)]
@@ -256,10 +246,6 @@ class Population:
         self.ant_num = GlobalInfo.ant_num
         self.ants = [Ant(GlobalInfo.src_node, obj_graph) for num in range(self.ant_num)]
 
-    def solve(self):
-        for ant in self.ants:
-            ant.solve()
-
 
 
 if __name__ == "__main__":
@@ -279,8 +265,13 @@ if __name__ == "__main__":
     print edge_num
     print ant_num
     print delay_w
+    GlobalInfo.node_num = node_num
+    GlobalInfo.edge_num = edge_num
+    GlobalInfo.src_node = src_node
+    GlobalInfo.dst_node = dst_node
+    GlobalInfo.ant_num = ant_num
+    GlobalInfo.delay_w = delay_w
     GlobalInfo()
-    GlobalInfo.init_param(node_num, edge_num, src_node, dst_node, ant_num, delay_w)
     obj_graph = Graph(node_num, edge_num)
     param_length = 5
     obj_graph.init_edge_measure(fp, param_length)
@@ -290,8 +281,10 @@ if __name__ == "__main__":
     print '------------------->graph.cost<------------'
     print obj_graph.cost
 
-    population = Population()
-    population.solve()
+    for i in range(20):
+        ant = Ant(GlobalInfo.src_node, obj_graph)
+        ant.solve()
+    # population = Population()
 
 
 
