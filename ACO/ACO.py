@@ -115,7 +115,7 @@ class GlobalInfo:
 class Ant:
 
     # 初始化
-    def __init__(self, src_node, graph):
+    def __init__(self, graph):
         self.graph = graph
         city_list = [i for i in range(GlobalInfo.node_num)]
         # 允许访问的城市(结点)集合
@@ -136,7 +136,7 @@ class Ant:
         self.Stack = []
         self.Stack.append(self.current_city)
         # delta[][] 数组初始化
-        self.delta_pheromone = [[0 for col in range(GlobalInfo.node_num)] for row in range(graph.node_num)]
+        self.delta_pheromone = [[0 for col in range(GlobalInfo.node_num)] for row in range(GlobalInfo.node_num)]
 
     # 选择下一个城市（结点）
     def choose_next_city(self):
@@ -242,10 +242,13 @@ class Ant:
 
 
 class Population:
-    def __init__(self, ):
+    def __init__(self, obj_graph):
         self.ant_num = GlobalInfo.ant_num
-        self.ants = [Ant(GlobalInfo.src_node, obj_graph) for num in range(self.ant_num)]
+        self.ants = [Ant(obj_graph) for num in range(self.ant_num)]
 
+    def solve(self):
+        for ant in self.ants:
+            ant.solve()
 
 
 if __name__ == "__main__":
@@ -281,10 +284,11 @@ if __name__ == "__main__":
     print '------------------->graph.cost<------------'
     print obj_graph.cost
 
-    for i in range(20):
-        ant = Ant(GlobalInfo.src_node, obj_graph)
-        ant.solve()
-    # population = Population()
+    # for i in range(20):
+    #     ant = Ant(GlobalInfo.src_node, obj_graph)
+    #     ant.solve()
+    population = Population(obj_graph)
+    population.solve()
 
 
 
