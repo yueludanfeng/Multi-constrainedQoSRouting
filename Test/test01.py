@@ -13,3 +13,6 @@ mykwargs = {'arg1': '1', 'arg2': 'two', 'arg3': None}      # 定义字典类型
 fun_args(**mykwargs)
 a = [1, 2, 3]
 print a
+
+flag = True
+print not flag
