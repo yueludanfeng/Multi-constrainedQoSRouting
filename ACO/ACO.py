@@ -1,8 +1,7 @@
 # coding=utf-8
 from math import pow
 from random import randrange
-
-
+from random import random
 class Graph:
     def __init__(self, node_num, edge_num):
         # 结点数
@@ -90,65 +89,139 @@ class GlobalInfo:
     alpha = 1
     beta = 1
     rho = 0.1
-    q0 = 0.2
-    q1 = 0.2
+    # 如果随机数小于或等于r则选择max{pher(r,s)}
+    # 否则按照概率公式进行转移
+    r = 0.2
+    # pheromone[][] 全局信息素初始值
+    C = 1
     node_num = 0
     edge_num = 0
     src_node = 0
     dst_node = 0
     ant_num = 0
     delay_w = 0
-    C =1
-    # 全局信息素矩阵初始化
-    pheromone = [[C for col in range(node_num)] for row in range(node_num)]
-    # 全局信息素变化矩阵
-    delta_pheromone = [[0 for col in range(node_num)] for row in range(node_num)]
-
+    pheromone = None
+    delta_pheromone = None
 
     def __init__(self):
-        pass
+        # 全局信息素矩阵初始`化
+        GlobalInfo.pheromone = [[GlobalInfo.C for col in range(GlobalInfo.node_num)] for row in range(GlobalInfo.node_num)]
+        # 全局信息素变化矩阵
+        GlobalInfo.delta_pheromone = [[0 for col in range(GlobalInfo.node_num)] for row in range(GlobalInfo.node_num)]
+        print "GlobalInfo.pheromone=",GlobalInfo.pheromone
+        print "GlobalInfo.delta_pheromone=",GlobalInfo.delta_pheromone
 
 
 class Ant:
 
     # 初始化
     def __init__(self, src_node, graph):
-        city_list = [i for i in range(graph.node_num)]
+        self.graph = graph
+        city_list = [i for i in range(GlobalInfo.node_num)]
+        # 允许访问的城市(结点)集合
         self.allowed = city_list
-        # 城市数目
         # 初始城市
         self.first_city = src_node
         # 当前城市
         self.current_city = self.first_city
+        # 下一个城市
+        self.next_city = -1
         # 禁忌表(不允许访问的城市（结点）)
         self.tabu = [self.first_city]
         # 允许访问的城市
         self.allowed.remove(self.first_city)
-        # 访问的路径和
-        self.tour_length = 0
+        # 解
+        self.solution = [self.first_city]
+        # 用于回溯
+        self.Stack = []
+        self.Stack.append(self.current_city)
         # delta[][] 数组初始化
-        self.delta = [[0 for col in range(graph.node_num)] for row in range(graph.node_num)]
+        self.delta_pheromone = [[0 for col in range(GlobalInfo.node_num)] for row in range(graph.node_num)]
 
     # 选择下一个城市（结点）
     def choose_next_city(self):
-
-
+        # if rand_value > r, 按照此公式(依照概率，按照赌轮选择)计算；否则选择pher(r,s)最大的结点
+        print '-------------enter into choose_next_city()-----'
         # 计算路径迁移概率
-        transe_p = [0 for i in range(GlobalInfo.node_num)]
+        transe_p = {}
+        current_city = self.current_city
+        print 'current_city = ', current_city
+        # 计算分母
+        fm_sum = 0
+        print 'self.allowed =', self.allowed
+        count = 0
+        for index in self.allowed:
+            # 在允许访问的结点中只需要考虑相邻结点（城市）
+            if not self.graph.get_connection_status(current_city, index):
+                count += 1
+                print 'count = ', count
+                continue
+            fm_sum += pow(GlobalInfo.pheromone[self.current_city][index], GlobalInfo.alpha) * \
+                      pow(self.graph.get_cost()[self.current_city][index], GlobalInfo.beta)
+            print 'fm_sum = ', fm_sum
+        # 如果分母为0，则说明当前结点没有相邻结点,需要回溯
+        if fm_sum == 0:
+            self.next_city = -1
 
         for city_index in self.allowed:
-            # [BandWidth Delay Jitter] Delay equals 0 denotes disconnection
-            if graph[self.current_city][city_index][1] == 0:
+            # 在允许访问的结点中只需要考虑相邻结点（城市)
+            if not self.graph.get_connection_status(current_city, city_index):
                 continue
             # 计算分子
-            fz = pow(pheromone[self.current_city][city_index], alpha)*(pow(distance[self.current_city][city_index], beta))
-            # 计算分母
-            fm_sum = 0
-            for index in self.allowed:
-                fm_sum += pow(pheromone[self.current_city][index], alpha) * pow(pheromone[self.current_city][index], beta)
-            transe_p[i] = fz/fm_sum
-        # 选择合适的
+            print 'aaaaaaa'
+            fz = pow(GlobalInfo.pheromone[self.current_city][city_index], GlobalInfo.alpha) * (pow(self.graph.get_cost()[self.current_city][city_index], GlobalInfo.beta))
+            print '-----fz = ', fz
+            transe_p[city_index] = fz / fm_sum
+        # 获得概率最大的
+        res = sorted(transe_p.items(), key=lambda d: d[1], reverse=True)
+        # 获取最大概率对应的结点(城市)编号
+        print "res =", res
+        rand_value = random()
+        # 如果随机数不大于r,则选择概率最大的；否则以概率选择(有的论文排了序，有的没有排序)
+        if rand_value <= GlobalInfo.r:
+            self.next_city = res[0][0]
+        rand_prob = random()
+        sum_prob = 0
+        for k, v in res:
+            sum_prob += v
+            if sum_prob >= rand_prob:
+                self.next_city = k
 
+    def move_to_next_city(self):
+        # 没找到下一个结点
+        if self.next_city == -1:
+            self.Stack.pop()
+            self.current_city = self.Stack.pop()
+        # 找到下一个结点
+        else:
+            self.current_city = self.next_city
+            self.next_city = -1
+            # self.solution.append(self.current_city)
+            self.allowed.remove(self.current_city)
+            self.tabu.append(self.current_city)
+            self.Stack.append(self.current_city)
+    # 局部信息素的更新，只更新该蚂蚁走过的路径上的信息素
+    # 是每走一步更新一次，还是等走完之后在更新信息素呢
+    # 答案是：每走一步都要更新一次；走完之后还要更新一次
+    # Tao(i, j)<t+1> = (1-rho1) * Tao(i, j)<t> + delta_tao(i, j)
+    # 参考《遗传算法融合蚁群算法》
+    # 局部信息素更新
+
+    def update_pheromone(self):
+        pass
+        # GlobalInfo.pheromone[self.current_city][self.next_city] = (1-GlobalInfo.q0) * GlobalInfo.pheromone[self.current_city][self.next_city] + \
+        #                                                          GlobalInfo.q0 * 1.0 / (self.graph.get_delay()[self.current_city][self.next_city])
+
+    def solve(self):
+        # while self.current_city != GlobalInfo.dst_node:
+        while True:
+            self.choose_next_city()
+            self.move_to_next_city()
+            if self.current_city == GlobalInfo.dst_node:
+                break
+        # 万万没想到,Stack就是解
+        self.solution = self.Stack
+        self.update_pheromone()
 
 if __name__ == "__main__":
     # 读取文件中相关信息
@@ -171,8 +244,9 @@ if __name__ == "__main__":
     GlobalInfo.edge_num = edge_num
     GlobalInfo.src_node = src_node
     GlobalInfo.dst_node = dst_node
-    GlobalInfo.ant_num  = ant_num
+    GlobalInfo.ant_num = ant_num
     GlobalInfo.delay_w = delay_w
+    GlobalInfo()
     obj_graph = Graph(node_num, edge_num)
     param_length = 5
     obj_graph.init_edge_measure(fp, param_length)
@@ -182,8 +256,10 @@ if __name__ == "__main__":
     print '------------------->graph.cost<------------'
     print obj_graph.cost
 
-
-
-
+    ant = Ant(GlobalInfo.src_node, obj_graph)
+    print "ant.solution=", ant.solution
+    next_city = ant.choose_next_city()
+    print "next_city = "
+    print next_city
 
 
