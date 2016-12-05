@@ -177,15 +177,21 @@ class Ant:
         # 获取最大概率对应的结点(城市)编号
         print "res =", res
         rand_value = random()
+        print 'rand_value=',rand_value
         # 如果随机数不大于r,则选择概率最大的；否则以概率选择(有的论文排了序，有的没有排序)
         if rand_value <= GlobalInfo.r:
+            print 'rand_value <= GlobalInfo.r:'
             self.next_city = res[0][0]
         rand_prob = random()
+        print 'rand_prob=',rand_prob
         sum_prob = 0
         for k, v in res:
             sum_prob += v
+            print 'sum_prob=',sum_prob
             if sum_prob >= rand_prob:
                 self.next_city = k
+                print 'self.next_city=',self.next_city
+                break
 
     def move_to_next_city(self):
         # 没找到下一个结点
@@ -258,8 +264,7 @@ if __name__ == "__main__":
 
     ant = Ant(GlobalInfo.src_node, obj_graph)
     print "ant.solution=", ant.solution
-    next_city = ant.choose_next_city()
-    print "next_city = "
-    print next_city
+    ant.choose_next_city()
+    print "next_city = ",ant.next_city
 
 
