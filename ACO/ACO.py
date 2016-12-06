@@ -1,7 +1,14 @@
 # coding=utf-8
 from math import pow
-from random import randrange
 from random import random
+from math import log10
+import matplotlib.pyplot as pl
+import sys
+
+# 输出重定向至指定的文件中，便于查看
+file_obj = open('out.txt', 'w+')
+save_stdout = sys.stdout
+sys.stdout = file_obj
 class Graph:
     def __init__(self, node_num, edge_num):
         # 结点数
@@ -22,6 +29,12 @@ class Graph:
         self.total_cost = 0
         # 总时延
         self.total_delay = 0
+
+    def get_total_cost(self):
+        return self.total_cost
+
+    def get_total_delay(self):
+        return self.total_delay
 
     def get_node_adjs(self):
         return self.node_adjs
@@ -86,12 +99,17 @@ class Graph:
 
 
 class GlobalInfo:
+    Q1 = 100.0
+    Q2 = 400.0
     alpha = 1
     beta = 1
+    # 信息素挥因子
     rho = 0.1
     # 如果随机数小于或等于r则选择max{pher(r,s)}
     # 否则按照概率公式进行转移
     r = 0.2
+    # 当delay>delay_w时，将其乘以一个系数
+    k = 0.5
     # pheromone[][] 全局信息素初始值
     C = 1
     node_num = 0
@@ -102,6 +120,15 @@ class GlobalInfo:
     delay_w = 0
     pheromone = None
     delta_pheromone = None
+
+    @staticmethod
+    def init_param(node_num, edge_num, src_node, dst_node, ant_num, delay_w):
+        GlobalInfo.node_num = node_num
+        GlobalInfo.edge_num = edge_num
+        GlobalInfo.src_node = src_node
+        GlobalInfo.dst_node = dst_node
+        GlobalInfo.ant_num = ant_num
+        GlobalInfo.delay_w = delay_w
 
     def __init__(self):
         # 全局信息素矩阵初始`化
@@ -137,6 +164,43 @@ class Ant:
         self.Stack.append(self.current_city)
         # delta[][] 数组初始化
         self.delta_pheromone = [[0 for col in range(GlobalInfo.node_num)] for row in range(GlobalInfo.node_num)]
+        # fitness适应值
+        self.fitness = 0
+        # cost
+        self.cost = 0
+        # delay
+        self.delay = 0
+
+    def sum_cost(self):
+        cost_matrix = self.graph.get_cost()
+        solution_len = len(self.solution)
+        sum_cost = 0
+        for i in range(solution_len-1):
+            sum_cost += cost_matrix[self.solution[i]][self.solution[i+1]]
+        self.cost = sum_cost
+
+    def sum_delay(self):
+        delay_matrix = self.graph.get_delay()
+        solution_len = len(self.solution)
+        sum_delay = 0
+        for i in range(solution_len-1):
+            sum_delay += delay_matrix[self.solution[i]][self.solution[i+1]]
+        self.delay = sum_delay
+
+    def calculate_fitness_new(self):
+        self.sum_delay()
+        self.sum_cost()
+        self.fitness = log10(self.graph.get_total_delay() + GlobalInfo.delay_w - self.delay) \
+                     * (self.graph.get_total_cost() - self.cost)
+
+    def calculate_fitness(self):
+        self.sum_delay()
+        self.sum_cost()
+        total_cost = self.graph.get_total_cost()
+        if self.delay <= GlobalInfo.delay_w:
+            self.fitness = (total_cost + 0.0) / self.cost
+        else:
+            self.fitness = (total_cost + 0.0) / self.cost
 
     # 选择下一个城市（结点）
     def choose_next_city(self):
@@ -199,12 +263,19 @@ class Ant:
     def move_to_next_city(self):
         # 没找到下一个结点
         if self.next_city == -1:
+            print 'before self.solution=', self.solution
+            print 'before self.Stack=', self.Stack
             self.solution.pop()
             top = self.Stack.pop()
             if top == self.current_city:
                 self.current_city = self.Stack.pop()
+                self.Stack.append(self.current_city)
             else:
+                print 'llllllllllllllll'
                 self.current_city = top
+            print 'self.current_city =', self.current_city
+            print 'after self.solution=', self.solution
+            print 'after self.Stack=', self.Stack
         # 找到下一个结点
         else:
             self.current_city = self.next_city
@@ -222,11 +293,23 @@ class Ant:
     # 局部信息素更新
 
     def update_pheromone(self):
-        pass
-        # GlobalInfo.pheromone[self.current_city][self.next_city] = (1-GlobalInfo.q0) * GlobalInfo.pheromone[self.current_city][self.next_city] + \
-        #                                                          GlobalInfo.q0 * 1.0 / (self.graph.get_delay()[self.current_city][self.next_city])
+        path_length = len(self.solution)
+        delay = self.graph.get_delay()
+        print 'delay=',delay
+        print 'solution before update pheromone=', self.solution
+        for i in range(path_length - 1):
+            row_num = self.solution[i]
+            col_num = self.solution[i+1]
+            print 'row_num=', row_num
+            print 'col_num=', col_num
+            if delay[row_num][col_num] == 0:
+                print '00000000000000000'
+                continue
+            delta_tao = 1.0 / delay[row_num][col_num]
+            GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
+            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
 
-    def solve(self):
+    def find_path(self):
         # while self.current_city != GlobalInfo.dst_node:
         while True:
             self.choose_next_city()
@@ -235,20 +318,78 @@ class Ant:
                 break
             else:
                 print 'current_city=',self.current_city
-        # 万万没想到,Stack就是解
-        # self.solution = self.Stack
-        self.update_pheromone()
+
+        # self.update_pheromone()
         print 'self.solution = ',self.solution
 
 
 class Population:
+    MAX_GENERATION = 100
+
     def __init__(self, obj_graph):
+        self.graph = obj_graph
         self.ant_num = GlobalInfo.ant_num
         self.ants = [Ant(obj_graph) for num in range(self.ant_num)]
+        self.best_fitness = 0
+        self.avg_fitness = 0
+        self.best_solution = []
+        self.best_cost = 0
+        self.best_delay = 0
 
-    def solve(self):
+    def find_path(self):
         for ant in self.ants:
-            ant.solve()
+            ant.find_path()
+
+    def update_individual_pheromone(self):
+        for ant in self.ants:
+            ant.update_pheromone()
+
+    def calculate_best_fitness_and_best_solution(self):
+        sum_fitness = 0
+        for ant in self.ants:
+            ant.calculate_fitness()
+            if self.best_fitness < ant.fitness:
+                self.best_fitness = ant.fitness
+                self.best_solution = ant.solution
+                self.best_cost = ant.cost
+                self.best_delay = ant.delay
+            sum_fitness += ant.fitness
+        self.avg_fitness = sum_fitness / GlobalInfo.ant_num
+
+    def update_global_pheromone(self):
+        path_length = len(self.best_solution)
+        for i in range(path_length - 1):
+            row_num = self.best_solution[i]
+            col_num = self.best_solution[i + 1]
+            cost_matrix = self.graph.get_cost()
+            delta_tao = 1.0 / cost_matrix[row_num][col_num]
+
+            GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
+            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q2
+
+    def solve(self, best_fitnesses, avg_fitnesses, min_costs):
+        generation = 0
+        while generation < Population.MAX_GENERATION:
+            self.find_path()
+            self.calculate_best_fitness_and_best_solution()
+            print 'before update pheromone GlobalInfo.pheromone=',GlobalInfo.pheromone
+            self.update_individual_pheromone()
+            print 'after update pheromone GlobalInfo.pheromone=',GlobalInfo.pheromone
+            self.update_global_pheromone()
+            print '----------------------------------'
+            print 'generation = ',generation
+            print 'current best_fitness = ', self.best_fitness
+            print 'current best_solution = ', self.best_solution
+            print 'current best_cost = ', self.best_cost
+            print 'current best_delay = ', self.best_delay
+            best_fitnesses.append(self.best_fitness)
+            avg_fitnesses.append(self.avg_fitness)
+            min_costs.append(self.best_cost)
+            self.ants = [Ant(obj_graph) for num in range(self.ant_num)]
+            generation += 1
+
+
+            # self = Population(obj_graph)
 
 
 if __name__ == "__main__":
@@ -268,12 +409,8 @@ if __name__ == "__main__":
     print edge_num
     print ant_num
     print delay_w
-    GlobalInfo.node_num = node_num
-    GlobalInfo.edge_num = edge_num
-    GlobalInfo.src_node = src_node
-    GlobalInfo.dst_node = dst_node
-    GlobalInfo.ant_num = ant_num
-    GlobalInfo.delay_w = delay_w
+    # 之前重构出现错误是因为init_param放在了GlobalInfo()函数之后，而GlobalInfo()函数会使用GlobalInfo.node_num
+    GlobalInfo.init_param(node_num, edge_num, src_node, dst_node, ant_num, delay_w)
     GlobalInfo()
     obj_graph = Graph(node_num, edge_num)
     param_length = 5
@@ -288,8 +425,45 @@ if __name__ == "__main__":
     #     ant = Ant(GlobalInfo.src_node, obj_graph)
     #     ant.solve()
     population = Population(obj_graph)
-    population.solve()
+    # population.find_path()
+    # population.update_individual_pheromone()
+    best_fitnesses = []
+    avg_fitnesses = []
+    min_costs = []
+    population.solve(best_fitnesses, avg_fitnesses, min_costs)
+    sys.stdout.close()
+    # sys.stdout = save_stdout
 
+    x = [i for i in range(Population.MAX_GENERATION)]
+    y = best_fitnesses
+    z = avg_fitnesses
+    u = min_costs
+    tmp = min_costs[Population.MAX_GENERATION-1]
+    best_generation = Population.MAX_GENERATION
+    for cost in min_costs[::-1]:
+        if cost == tmp:
+            best_generation -= 1
+        elif cost > tmp:
+            best_generation += 1
+            break
 
+    value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.ant_num, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
+             GlobalInfo.Q2, population.best_cost, population.best_delay, population.best_solution, best_generation)
+    info = 'node_num=%d, edge_num=%d, pop_scale=%d, rho=%f, r=%f,Q1=%f, Q2=%f, global_min_cost=%d,' \
+           ' corresponding_delay=%d, best_solution=%s, best_generation=%d' % value
+    pl.figure(info)
+    pl.subplot(211)
+    # pl.xlabel('generation')
+    pl.ylabel('fitness')
+    pl.plot(x, y, 'r-', label='best_fitness')
+    pl.plot(x, z, 'b.-', label='avg_fitness')
+    pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    pl.subplot(212)
+    pl.xlabel('generation')
+    pl.ylabel('cost')
+    pl.plot(x, u, 'r.-', label='min_cost')
+    pl.legend()
+    # pl.text(90, 4, '--min_cost', color='red')
 
+    pl.show()
 
