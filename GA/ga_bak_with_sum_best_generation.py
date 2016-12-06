@@ -14,6 +14,7 @@ from sys import stdout
 
 # 输出重定向至指定的文件中，便于查看
 file_obj = open('out.txt', 'a+')
+save_stdout = stdout
 stdout = file_obj
 
 
@@ -711,49 +712,65 @@ if __name__ == '__main__':
     # pm = 0.001
     # #时延约束
     # delay_w = 8
-    population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
-    pop_size = population.get_popsize()
-    print 'pop_size=', pop_size
+    TIMES = 1
+    best_generation = 0
+    for times in range(TIMES):
+        population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
+        pop_size = population.get_popsize()
+        print 'pop_size=', pop_size
 
-    generations = 0
-    MAX_GENERATION = 100
-    best_fitnesses = []
-    avg_fitnesses = []
-    min_costs = []
-    flag = True
-    count = 0
-    TIME = 1000
-    sum_generation = 0
-    ratio = 0
-    population.calculate_fitness()
-    while generations < MAX_GENERATION:
-        print '--------------------generations=>>>>>', generations, '<<<<--------------'
-        # 计算种群中所以个体的适应度值
-        # population.calculate_fitness()
-        for i in range(pop_size):
-            # s1 = Population.random_chromosome(graph, 0, 4)
-            s1 = population.chromosomes[i]
-            print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
-        population.choose()
-        population.crossover()
-        population.mutate()
-        population.update()
+        generations = 0
+        MAX_GENERATION = 100
+        best_fitnesses = []
+        avg_fitnesses = []
+        min_costs = []
+        flag = True
+        count = 0
+        TIME = 1000
+        sum_generation = 0
+        ratio = 0
         population.calculate_fitness()
-        avg_fitness = population.avg_fitness
-        avg_fitnesses.append(avg_fitness)
-        best_fitnesses.append(population.get_best_fitness())
-        best_chromosome = Chromosome()
-        best_chromosome.set_solution(population.best_solution)
-        min_cost = best_chromosome.get_total_cost(graph)
-        min_costs.append(min_cost)
-        # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
-        #     sum_generation += generations
-        #     flag = False
-        generations += 1
+        while generations < MAX_GENERATION:
+            print '--------------------generations=>>>>>', generations, '<<<<--------------'
+            # 计算种群中所以个体的适应度值
+            # population.calculate_fitness()
+            for i in range(pop_size):
+                # s1 = Population.random_chromosome(graph, 0, 4)
+                s1 = population.chromosomes[i]
+                print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
+            population.choose()
+            population.crossover()
+            population.mutate()
+            population.update()
+            population.calculate_fitness()
+            avg_fitness = population.avg_fitness
+            avg_fitnesses.append(avg_fitness)
+            best_fitnesses.append(population.get_best_fitness())
+            best_chromosome = Chromosome()
+            best_chromosome.set_solution(population.best_solution)
+            min_cost = best_chromosome.get_total_cost(graph)
+            min_costs.append(min_cost)
+            # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
+            #     sum_generation += generations
+            #     flag = False
+            generations += 1
+        tmp = min_costs[MAX_GENERATION-1]
+        generation_index = MAX_GENERATION
+        for value in min_costs[::-1]:
+            if tmp == value:
+                generation_index -= 1
+            elif value > tmp:
+                generation_index += 1
+                break
+        best_generation += generation_index
+    best_generation /= TIMES
+    print 'best_generation = ',best_generation
     # long running
     endtime = clock()
     # 只计算程序运行的CPU时间
     print "program costs time is %.8f s" % (endtime - starttime)
+    print 'best_generation = ',best_generation
+    stdout = save_stdout
     x = [i for i in range(MAX_GENERATION)]
     y = best_fitnesses
     z = avg_fitnesses

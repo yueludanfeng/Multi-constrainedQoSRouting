@@ -424,33 +424,41 @@ if __name__ == "__main__":
     # for i in range(20):
     #     ant = Ant(GlobalInfo.src_node, obj_graph)
     #     ant.solve()
-    population = Population(obj_graph)
-    # population.find_path()
-    # population.update_individual_pheromone()
-    best_fitnesses = []
-    avg_fitnesses = []
-    min_costs = []
-    population.solve(best_fitnesses, avg_fitnesses, min_costs)
-    sys.stdout.close()
-    # sys.stdout = save_stdout
+    avg_best_generation = 0
+    TIMES = 1000
+    for times in range(TIMES):
+        population = Population(obj_graph)
+        # population.find_path()
+        # population.update_individual_pheromone()
+        best_fitnesses = []
+        avg_fitnesses = []
+        min_costs = []
+        population.solve(best_fitnesses, avg_fitnesses, min_costs)
+        # sys.stdout.close()
+        # sys.stdout = save_stdout
 
-    x = [i for i in range(Population.MAX_GENERATION)]
-    y = best_fitnesses
-    z = avg_fitnesses
-    u = min_costs
-    tmp = min_costs[Population.MAX_GENERATION-1]
-    best_generation = Population.MAX_GENERATION
-    for cost in min_costs[::-1]:
-        if cost == tmp:
-            best_generation -= 1
-        elif cost > tmp:
-            best_generation += 1
-            break
+        x = [i for i in range(Population.MAX_GENERATION)]
+        y = best_fitnesses
+        z = avg_fitnesses
+        u = min_costs
+        tmp = min_costs[Population.MAX_GENERATION-1]
+        best_generation = Population.MAX_GENERATION
+        for cost in min_costs[::-1]:
+            if cost == tmp:
+                best_generation -= 1
+            elif cost > tmp:
+                best_generation += 1
+                break
+        avg_best_generation += best_generation
 
+    avg_best_generation /= TIMES
+    sys.stdout = save_stdout
+    print "avg_best_generation =", avg_best_generation
     value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.ant_num, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
-             GlobalInfo.Q2, population.best_cost, population.best_delay, population.best_solution, best_generation)
-    info = 'node_num=%d, edge_num=%d, pop_scale=%d, rho=%f, r=%f,Q1=%f, Q2=%f, global_min_cost=%d,' \
-           ' corresponding_delay=%d, best_solution=%s, best_generation=%d' % value
+             GlobalInfo.Q2, population.best_cost, population.best_delay, population.best_solution, best_generation,
+             avg_best_generation)
+    info = 'node_num=%d, edge_num=%d, pop_scale=%d, rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, global_min_cost=%d,' \
+           ' corresponding_delay=%d, best_solution=%s, best_generation=%d, avg_best_generation=%d' % value
     pl.figure(info)
     pl.subplot(211)
     # pl.xlabel('generation')

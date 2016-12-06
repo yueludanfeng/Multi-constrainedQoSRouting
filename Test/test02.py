@@ -45,3 +45,16 @@ while True:
         break
     else:
         print 'hh'
+
+lista = [1,2,3]
+lena = len(lista)
+print 'end is',lista[lena-1]
+def add(li):
+    li.append(1)
+a = []
+add(a)
+print 'a=',a
+example = [1,2,3]
+print example[::-1]
+print 1+0.0
+print "%.1f" % (1/2.0)
