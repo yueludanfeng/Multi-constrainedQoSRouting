@@ -425,7 +425,7 @@ if __name__ == "__main__":
     #     ant = Ant(GlobalInfo.src_node, obj_graph)
     #     ant.solve()
     avg_best_generation = 0
-    TIMES = 1
+    TIMES = 1000
     for times in range(TIMES):
         population = Population(obj_graph)
         # population.find_path()
