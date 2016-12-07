@@ -13,7 +13,7 @@ from sys import stdout
 
 
 # 输出重定向至指定的文件中，便于查看
-file_obj = open('out.txt', 'a+')
+file_obj = open('out.txt', 'w+')
 stdout = file_obj
 
 
@@ -773,4 +773,4 @@ if __name__ == '__main__':
     # pl.text(90, 4, '--min_cost', color='red')
 
     pl.show()
-#qq
+
