@@ -99,9 +99,13 @@ class Graph:
 
 
 class GlobalInfo:
+    # Q1 / delat_delay
     Q1 = 100.0
+    # Q2 / delat_cost
     Q2 = 400.0
+    # 启发因子
     alpha = 1
+    # 期望因子
     beta = 1
     # 信息素挥因子
     rho = 0.1
@@ -413,6 +417,7 @@ if __name__ == "__main__":
     GlobalInfo.init_param(node_num, edge_num, src_node, dst_node, ant_num, delay_w)
     GlobalInfo()
     obj_graph = Graph(node_num, edge_num)
+    # 与每条边有关的参数个数
     param_length = 5
     obj_graph.init_edge_measure(fp, param_length)
     obj_graph.init_node_adjs()
