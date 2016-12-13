@@ -205,7 +205,7 @@ class Ant:
         if self.delay <= GlobalInfo.delay_w:
             self.fitness = (total_cost + 0.0) / self.cost
         else:
-            self.fitness = (total_cost + 0.0) / r * self.cost
+            self.fitness = (total_cost + 0.0) / (r * self.cost)
 
     # 选择下一个城市（结点）
     def choose_next_city(self):
@@ -226,9 +226,9 @@ class Ant:
                 print 'count = ', count
                 continue
             fm_sum += pow(GlobalInfo.pheromone[self.current_city][index], GlobalInfo.alpha) * \
-                      pow(self.graph.get_cost()[self.current_city][index], GlobalInfo.beta)
+                      pow(1.0/self.graph.get_cost()[self.current_city][index], GlobalInfo.beta)
             print 'fm_sum = ', fm_sum
-        # 如果分母为0，则说明当前结点没有相邻结点,需要回溯
+        # 如果分母为0，则说明当前结点没有相邻结点
         if fm_sum == 0:
             print 'fm_sum==0'
             # 表示没有找到下一个结点，而且赋值之后，要直接令返回，否则后面的代码会继续执行
@@ -241,7 +241,8 @@ class Ant:
                 continue
             # 计算分子
             print 'aaaaaaa'
-            fz = pow(GlobalInfo.pheromone[self.current_city][city_index], GlobalInfo.alpha) * (pow(self.graph.get_cost()[self.current_city][city_index], GlobalInfo.beta))
+            fz = pow(GlobalInfo.pheromone[self.current_city][city_index], GlobalInfo.alpha) * \
+                 (pow(1.0/self.graph.get_cost()[self.current_city][city_index], GlobalInfo.beta))
             print '-----fz = ', fz
             transe_p[city_index] = fz / fm_sum
         # 获得概率最大的
@@ -266,7 +267,7 @@ class Ant:
                 break
 
     def move_to_next_city(self):
-        # 没找到下一个结点
+        # 没找到下一个结点, 需要回溯
         if self.next_city == -1:
             print 'before self.solution=', self.solution
             print 'before self.Stack=', self.Stack
@@ -431,7 +432,7 @@ if __name__ == "__main__":
     #     ant = Ant(GlobalInfo.src_node, obj_graph)
     #     ant.solve()
     avg_best_generation = 0
-    TIMES = 1000
+    TIMES = 1
     for times in range(TIMES):
         population = Population(obj_graph)
         # population.find_path()
