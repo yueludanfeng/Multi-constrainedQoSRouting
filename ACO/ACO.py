@@ -99,21 +99,24 @@ class Graph:
 
 
 class GlobalInfo:
+    TIMES = 1
+    MAX_GENERATION = 100
     # Q1 / delat_delay
-    Q1 = 100.0
-    # Q2 / delat_cost
-    Q2 = 400.0
+    Q1 = 1.0
+    # Q2 / delat_cost 控制着算法的收敛速度，Q2越大收敛越快
+    Q2 = 80.0
     # 启发因子
     alpha = 1
-    # 期望因子
+    # 期望因子5
     beta = 1
     # 信息素挥因子
-    rho = 0.1
+    rho  = 0.1
+    rho2 = 0.1
     # 如果随机数小于或等于r则选择max{pher(r,s)}
     # 否则按照概率公式进行转移
-    r = 0.2
+    r = 0.5
     # 当delay>delay_w时，将其乘以一个系数
-    k = 0.5
+    k = 4
     # pheromone[][] 全局信息素初始值
     C = 1
     node_num = 0
@@ -157,8 +160,6 @@ class Ant:
         self.current_city = self.first_city
         # 下一个城市
         self.next_city = -1
-        # 禁忌表(不允许访问的城市（结点）)
-        self.tabu = [self.first_city]
         # 允许访问的城市
         self.allowed.remove(self.first_city)
         # 解
@@ -200,12 +201,12 @@ class Ant:
     def calculate_fitness(self):
         self.sum_delay()
         self.sum_cost()
-        r = 2
+        k = GlobalInfo.k
         total_cost = self.graph.get_total_cost()
         if self.delay <= GlobalInfo.delay_w:
             self.fitness = (total_cost + 0.0) / self.cost
         else:
-            self.fitness = (total_cost + 0.0) / (r * self.cost)
+            self.fitness = (total_cost + 0.0) / (k * self.cost)
 
     # 选择下一个城市（结点）
     def choose_next_city(self):
@@ -288,7 +289,7 @@ class Ant:
             self.next_city = -1
             # self.solution.append(self.current_city)
             self.allowed.remove(self.current_city)
-            self.tabu.append(self.current_city)
+            # self.tabu.append(self.current_city)
             self.solution.append(self.current_city)
             self.Stack.append(self.current_city)
     # 局部信息素的更新，只更新该蚂蚁走过的路径上的信息素
@@ -301,6 +302,7 @@ class Ant:
     def update_pheromone(self):
         path_length = len(self.solution)
         delay = self.graph.get_delay()
+        cost = self.graph.get_cost()
         print 'delay=',delay
         print 'solution before update pheromone=', self.solution
         for i in range(path_length - 1):
@@ -330,7 +332,7 @@ class Ant:
 
 
 class Population:
-    MAX_GENERATION = 100
+    MAX_GENERATION = GlobalInfo.MAX_GENERATION
 
     def __init__(self, obj_graph):
         self.graph = obj_graph
@@ -370,8 +372,8 @@ class Population:
             cost_matrix = self.graph.get_cost()
             delta_tao = 1.0 / cost_matrix[row_num][col_num]
 
-            GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
-            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q2
+            GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho2)
+            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho2 * delta_tao * GlobalInfo.Q2
 
     def solve(self, best_fitnesses, avg_fitnesses, min_costs):
         generation = 0
@@ -432,7 +434,7 @@ if __name__ == "__main__":
     #     ant = Ant(GlobalInfo.src_node, obj_graph)
     #     ant.solve()
     avg_best_generation = 0
-    TIMES = 1
+    TIMES = GlobalInfo.TIMES
     for times in range(TIMES):
         population = Population(obj_graph)
         # population.find_path()
