@@ -200,11 +200,12 @@ class Ant:
     def calculate_fitness(self):
         self.sum_delay()
         self.sum_cost()
+        r = 2
         total_cost = self.graph.get_total_cost()
         if self.delay <= GlobalInfo.delay_w:
             self.fitness = (total_cost + 0.0) / self.cost
         else:
-            self.fitness = (total_cost + 0.0) / self.cost
+            self.fitness = (total_cost + 0.0) / r * self.cost
 
     # 选择下一个城市（结点）
     def choose_next_city(self):
