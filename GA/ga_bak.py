@@ -10,6 +10,7 @@ from random import choice
 from random import random
 from time import clock
 from sys import stdout
+from random import sample
 
 
 # 输出重定向至指定的文件中，便于查看
@@ -567,7 +568,7 @@ class Chromosome:
     def mutate(self, graph, pm):
         print '----------------------------enter into Chromosome mutate-----------'
         random_p = random()
-        if random_p > pm:
+        if random_p > Global.pm:
             return
         # 可能会变异的结点
         node_may_be_mutated = []
@@ -679,6 +680,8 @@ class Population:
         self.avg_fitness = 0
         # 最好的解
         self.best_solution = []
+        # 最优解对应的时延之和
+        self.respective_delay = 0
         # 交配池
         self.mate_pool = []
         # 根据des_code逆向找到一条路径即为一个解
@@ -701,7 +704,7 @@ class Population:
         # 对种群中每个个体 计算适应度
         sum_fitness = 0
         for chromosome in self.chromosomes:
-            chromosome.calculate_fitness(self.graph, self.delay_w)
+            chromosome.calculate_fitness_new(self.graph, self.delay_w)
             sum_fitness += chromosome.get_fitness()
         # 计算适应度值的同时也计算了平均适应度值
         self.avg_fitness = sum_fitness / self.pop_size
@@ -712,13 +715,49 @@ class Population:
         if self.best_fitness < chromosome.get_fitness():
             self.best_fitness = chromosome.get_fitness()
             self.best_solution = chromosome.get_solution()
+            delay_matrix = self.graph.get_delay()
+            sum_delay = 0
+            solution_len = len(self.best_solution)
+            for i in range(solution_len-1):
+                sum_delay += delay_matrix[self.best_solution[i]][self.best_solution[i+1]]
+            self.respective_delay = sum_delay
         else:
             chromosome = Chromosome()
             chromosome.set_solution(self.best_solution)
             chromosome.set_fitness(self.best_fitness)
             self.chromosomes[self.pop_size-1] = chromosome
-        # 自适应变异概率,随着种群的平均适应度值变大，其变异概率应该减小
-        Global.pm = 1 - self.avg_fitness/self.best_solution
+
+
+    def get_best_one_from_list(self, candidates=None):
+        if candidates == None:
+            return None
+        max_fitness = 0
+        index = -1
+        for chromosome in candidates:
+            index += 1
+            fitness = chromosome.get_fitness()
+            if fitness > max_fitness:
+                max_fitness = fitness
+                max_index = index
+        return candidates[index]
+
+    def choose_jbs(self):
+        print '--------------------------enter into choose function----------------------------'
+        print 'self.best_fitness=', self.best_fitness
+        print 'self.best_solution=', self.best_solution
+        best_chromosome = Chromosome()
+        best_chromosome.set_solution(self.best_solution)
+        best_chromosome.set_fitness(self.best_fitness)
+        self.mate_pool = [best_chromosome]
+        for num in range(self.pop_size - 1):
+            candidates = sample(self.chromosomes,self.pop_size/2)
+            self.mate_pool.append(self.get_best_one_from_list(candidates))
+        self.mate_pool.sort()
+        self.mate_pool.reverse()
+        print 'len_mate_pool=', len(self.mate_pool)
+        print 'mate_pool='
+        for chrom in self.mate_pool:
+            print chrom.get_solution()
 
     # 选择pop_size-1个个体，加上最佳适应度个体，放入交配池，为遗传操作做准备
     def choose(self):
@@ -815,7 +854,8 @@ if __name__ == '__main__':
     starttime = clock()
     # f = open('test01.txt','r')
     # f = open('test02.txt', 'r')
-    f = open('test03.txt', 'r')
+    # f = open('test03.txt', 'r')
+    f = open('test03_new.txt', 'r')
     line = f.readline().split()
     print line
     node_num = int(line[0])
@@ -892,6 +932,7 @@ if __name__ == '__main__':
             s1 = population.chromosomes[i]
             print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
         population.choose()
+        # population.choose_jbs()
         population.crossover()
         population.mutate()
         population.update()
@@ -906,6 +947,8 @@ if __name__ == '__main__':
         # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
         #     sum_generation += generations
         #     flag = False
+        # 自适应变异概率,随着种群的平均适应度值变大，其变异概率应该减小
+        # Global.pm = 1 - population.avg_fitness/population.best_fitness
         generations += 1
     # long running
     endtime = clock()
@@ -915,7 +958,9 @@ if __name__ == '__main__':
     y = best_fitnesses
     z = avg_fitnesses
     u = min_costs
-    pl.figure('node_num=%d, edge_num=%d, pop_scale=%d, r=%.3f pc=%.3f, pm=%.3f, global_min_cost=%d, best_solution=%s' % (node_num, edge_num, pop_scale,Global.r, pc, pm, min_cost, population.best_solution))
+    info = 'node_num=%d, edge_num=%d, pop_scale=%d, r=%.3f pc=%.3f, pm=%.3f, global_min_cost=%d, best_solution=%s, respective_delay=%d'
+    value = (node_num, edge_num, pop_scale,Global.r, pc, pm, min_cost, population.best_solution, population.respective_delay)
+    pl.figure(info % value)
     pl.subplot(211)
     # pl.xlabel('generation')
     pl.ylabel('fitness')

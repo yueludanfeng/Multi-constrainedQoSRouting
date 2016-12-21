@@ -99,24 +99,31 @@ class Graph:
 
 
 class GlobalInfo:
+    c1 = 0.99
+    c2 = 1-c1
+    #第一代以后将count重新赋值为1，保证第一次迭代不会出现最优解
+    count = 0
+    # 当beta较大时,收敛速度较快
     TIMES = 1
-    MAX_GENERATION = 100
+    MAX_GENERATION = 10
     # Q1 / delat_delay
-    Q1 = 1.0
+    Q1 = 150.0
     # Q2 / delat_cost 控制着算法的收敛速度，Q2越大收敛越快
-    Q2 = 80.0
-    # 启发因子
+    Q2 = 150.0
+    # 信息启发因子
     alpha = 1
-    # 期望因子5
+    # 期望启发因子5
+    # beta = 1
     beta = 1
     # 信息素挥因子
-    rho  = 0.1
-    rho2 = 0.1
+    # rho  = 0.1
+    rho  = 0.2
+    rho2 = rho
     # 如果随机数小于或等于r则选择max{pher(r,s)}
     # 否则按照概率公式进行转移
-    r = 0.5
+    r = 0.1
     # 当delay>delay_w时，将其乘以一个系数
-    k = 4
+    k = 3
     # pheromone[][] 全局信息素初始值
     C = 1
     node_num = 0
@@ -151,6 +158,9 @@ class Ant:
     # 初始化
     def __init__(self, graph):
         self.graph = graph
+        self.init_param()
+
+    def init_param(self):
         city_list = [i for i in range(GlobalInfo.node_num)]
         # 允许访问的城市(结点)集合
         self.allowed = city_list
@@ -166,7 +176,7 @@ class Ant:
         self.solution = [self.first_city]
         # 用于回溯
         self.Stack = []
-        self.Stack.append(self.current_city)
+        # self.Stack.append(self.current_city)
         # delta[][] 数组初始化
         self.delta_pheromone = [[0 for col in range(GlobalInfo.node_num)] for row in range(GlobalInfo.node_num)]
         # fitness适应值
@@ -175,6 +185,9 @@ class Ant:
         self.cost = 0
         # delay
         self.delay = 0
+
+    def get_solution(self):
+        return self.solution
 
     def sum_cost(self):
         cost_matrix = self.graph.get_cost()
@@ -196,7 +209,7 @@ class Ant:
         self.sum_delay()
         self.sum_cost()
         self.fitness = log10(self.graph.get_total_delay() + GlobalInfo.delay_w - self.delay) \
-                     * (self.graph.get_total_cost() - self.cost)
+                       * (self.graph.get_total_cost() - self.cost)
 
     def calculate_fitness(self):
         self.sum_delay()
@@ -249,13 +262,14 @@ class Ant:
         # 获得概率最大的
         res = sorted(transe_p.items(), key=lambda d: d[1], reverse=True)
         # 获取最大概率对应的结点(城市)编号
-        print "res =", res
+        # print "res =", res
         rand_value = random()
         print 'rand_value=',rand_value
         # 如果随机数不大于r,则选择概率最大的；否则以概率选择(有的论文排了序，有的没有排序)
         if rand_value <= GlobalInfo.r:
             print 'rand_value <= GlobalInfo.r:'
             self.next_city = res[0][0]
+            return
         rand_prob = random()
         print 'rand_prob=',rand_prob
         sum_prob = 0
@@ -272,26 +286,31 @@ class Ant:
         if self.next_city == -1:
             print 'before self.solution=', self.solution
             print 'before self.Stack=', self.Stack
+            # self.solution.pop()
+            # top = self.Stack.pop()
+            # if top == self.current_city:
+            #     self.current_city = self.Stack.pop()
+            #     self.Stack.append(self.current_city)
+            # else:
+            #     print 'llllllllllllllll'
+            #     self.current_city = top
             self.solution.pop()
-            top = self.Stack.pop()
-            if top == self.current_city:
-                self.current_city = self.Stack.pop()
-                self.Stack.append(self.current_city)
-            else:
-                print 'llllllllllllllll'
-                self.current_city = top
+            self.current_city = self.Stack.pop()
             print 'self.current_city =', self.current_city
             print 'after self.solution=', self.solution
             print 'after self.Stack=', self.Stack
         # 找到下一个结点
         else:
+            # self.current_city = self.next_city
+            # self.next_city = -1
+            # self.allowed.remove(self.current_city)
+            # self.solution.append(self.current_city)
+            # self.Stack.append(self.current_city)
+            self.Stack.append(self.current_city)
             self.current_city = self.next_city
             self.next_city = -1
-            # self.solution.append(self.current_city)
             self.allowed.remove(self.current_city)
-            # self.tabu.append(self.current_city)
             self.solution.append(self.current_city)
-            self.Stack.append(self.current_city)
     # 局部信息素的更新，只更新该蚂蚁走过的路径上的信息素
     # 是每走一步更新一次，还是等走完之后在更新信息素呢
     # 答案是：每走一步都要更新一次；走完之后还要更新一次
@@ -313,9 +332,10 @@ class Ant:
             if delay[row_num][col_num] == 0:
                 print '00000000000000000'
                 continue
-            delta_tao = 1.0 / delay[row_num][col_num]
+            delta_tao = 1.0 / (GlobalInfo.c1*delay[row_num][col_num] + GlobalInfo.c2*cost[row_num][col_num])
             GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
             GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
+
 
     def find_path(self):
         # while self.current_city != GlobalInfo.dst_node:
@@ -329,6 +349,10 @@ class Ant:
 
         # self.update_pheromone()
         print 'self.solution = ',self.solution
+        if GlobalInfo.count ==0 and self.solution == [0, 2, 5, 10, 15, 19]:
+            print "-------count=0----"
+            self.init_param()
+            self.find_path()
 
 
 class Population:
@@ -347,6 +371,9 @@ class Population:
     def find_path(self):
         for ant in self.ants:
             ant.find_path()
+        print '----------ants=--------'
+        for ant in self.ants:
+            print ant.get_solution()
 
     def update_individual_pheromone(self):
         for ant in self.ants:
@@ -395,6 +422,8 @@ class Population:
             min_costs.append(self.best_cost)
             self.ants = [Ant(obj_graph) for num in range(self.ant_num)]
             generation += 1
+            if generation > 0:
+                GlobalInfo.count = 1
 
 
             # self = Population(obj_graph)
@@ -402,7 +431,8 @@ class Population:
 
 if __name__ == "__main__":
     # 读取文件中相关信息
-    fp = open("test03.txt")
+    # fp = open("test03.txt","r")
+    fp = open("test03_new.txt","r")
     line = fp.readline().split()
     node_num = int(line[0])
     edge_num = int(line[1])
@@ -463,18 +493,20 @@ if __name__ == "__main__":
     avg_best_generation /= TIMES
     sys.stdout = save_stdout
     print "avg_best_generation =", avg_best_generation
-    value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.ant_num, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
+    value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.ant_num, GlobalInfo.rho,GlobalInfo.c1, GlobalInfo.r, GlobalInfo.Q1,
              GlobalInfo.Q2, population.best_cost, population.best_delay, population.best_solution, best_generation,
              avg_best_generation)
-    info = 'node_num=%d, edge_num=%d, pop_scale=%d, rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, global_min_cost=%d,' \
-           ' corresponding_delay=%d, best_solution=%s, best_generation=%d, avg_best_generation=%d' % value
+    info = 'node_num=%d, edge_num=%d, ant_num=%d, rho=%.2f,c1=%d, r=%.2f,Q1=%.2f, Q2=%.2f, global_min_cost=%d,' \
+           ' respective_delay=%d, best_solution=%s, best_generation=%d, avg_best_generation=%d' % value
     pl.figure(info)
     pl.subplot(211)
+    pl.ylim(-8,20)
     # pl.xlabel('generation')
     pl.ylabel('fitness')
     pl.plot(x, y, 'r-', label='best_fitness')
     pl.plot(x, z, 'b.-', label='avg_fitness')
-    pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    # pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    pl.legend(loc='lower right')
     pl.subplot(212)
     pl.xlabel('generation')
     pl.ylabel('cost')

@@ -132,16 +132,16 @@ class GlobalInfo:
     #Graph
     graph = None
     # Q1 / delat_delay
-    Q1 = 1.0
+    Q1 = 150.0
     # Q2 / delat_cost
-    Q2 = 10.0
+    Q2 = 150.0
     # 启发因子
     alpha = 1
     # 期望因子
-    beta = 5
+    beta = 1
     # 信息素挥因子
-    rho = 0.1
-    rho2 = 0.1
+    rho = 0.2
+    rho2 = 0.2
     # 如果随机数小于或等于r则选择max{pher(r,s)}
     # 否则按照概率公式进行转移
     r = 0.5
@@ -185,7 +185,8 @@ class GlobalInfo:
     @staticmethod
     def read_info_from_file():
         # 从文件中读取信息并初始化GlobalInfo类和Graph类
-        fp = open("test03.txt", 'r')
+        # fp = open("test03.txt", 'r')
+        fp = open("test03_new.txt", 'r')
         line = fp.readline().split()
         node_num = int(line[0])
         edge_num = int(line[1])
@@ -1074,11 +1075,11 @@ if __name__ == "__main__":
 
     GlobalInfo.generations = [i for i in range(generation_length)]
     value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.pop_scale,GlobalInfo.Pc,
-             GlobalInfo.Pm, GlobalInfo.ant_num, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
+             GlobalInfo.Pm, GlobalInfo.ant_num,GlobalInfo.alpha,GlobalInfo.beta, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
              GlobalInfo.Q2, min(GlobalInfo.min_costs), GlobalInfo.best_delay,GlobalInfo.best_solution,GlobalInfo.STOP_TIME
              )
-    info = 'node_num=%d, edge_num=%d,GA_pop_scale=%d,Pc=%.3f,Pm=%.3f, ACO_ant_num=%d, ' \
-           'rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, global_min_cost=%d, ' \
+    info = 'node_num=%d, edge_num=%d,pop_scale=%d,Pc=%.3f,Pm=%.3f, ant_num=%d,alpha=%d,beta=%d ' \
+           'rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, min_cost=%d, ' \
            'best_delay=%d, best_solution=%s, stagnancy_time=%d' % value
     pl.figure(info)
     pl.subplot(211)
