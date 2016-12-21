@@ -6,3 +6,4 @@ print sample(a,3)
 
 d = {1:'a',2:'b'}
 print 'hello'
+print 'hello'
