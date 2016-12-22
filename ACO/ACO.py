@@ -99,13 +99,13 @@ class Graph:
 
 
 class GlobalInfo:
-    c1 = 0.99
+    c1 = 0.9
     c2 = 1-c1
     #第一代以后将count重新赋值为1，保证第一次迭代不会出现最优解
     count = 0
     # 当beta较大时,收敛速度较快
     TIMES = 1
-    MAX_GENERATION = 10
+    MAX_GENERATION = 100
     # Q1 / delat_delay
     Q1 = 150.0
     # Q2 / delat_cost 控制着算法的收敛速度，Q2越大收敛越快
@@ -334,7 +334,10 @@ class Ant:
                 continue
             delta_tao = 1.0 / (GlobalInfo.c1*delay[row_num][col_num] + GlobalInfo.c2*cost[row_num][col_num])
             GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
-            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
+            # GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
+            GlobalInfo.pheromone[row_num][col_num] +=  delta_tao * GlobalInfo.Q1
+            # 由于信息素数组是对称的，所以需要如下操作
+            GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
 
 
     def find_path(self):
@@ -400,7 +403,9 @@ class Population:
             delta_tao = 1.0 / cost_matrix[row_num][col_num]
 
             GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho2)
-            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho2 * delta_tao * GlobalInfo.Q2
+            # GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho2 * delta_tao * GlobalInfo.Q2
+            GlobalInfo.pheromone[row_num][col_num] +=  delta_tao * GlobalInfo.Q2
+            GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
 
     def solve(self, best_fitnesses, avg_fitnesses, min_costs):
         generation = 0
@@ -500,13 +505,13 @@ if __name__ == "__main__":
            ' respective_delay=%d, best_solution=%s, best_generation=%d, avg_best_generation=%d' % value
     pl.figure(info)
     pl.subplot(211)
-    pl.ylim(-8,20)
+    # pl.ylim(-8,20)
     # pl.xlabel('generation')
     pl.ylabel('fitness')
     pl.plot(x, y, 'r-', label='best_fitness')
     pl.plot(x, z, 'b.-', label='avg_fitness')
-    # pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
-    pl.legend(loc='lower right')
+    pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    # pl.legend(loc='lower right')
     pl.subplot(212)
     pl.xlabel('generation')
     pl.ylabel('cost')
