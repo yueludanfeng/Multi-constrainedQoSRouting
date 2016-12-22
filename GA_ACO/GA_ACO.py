@@ -789,6 +789,7 @@ class Transaction:
             solution_len = len(solution)
             for i in range(solution_len - 1):
                 GlobalInfo.pheromone[solution[i]][solution[i+1]] += GlobalInfo.deltaC
+                GlobalInfo.pheromone[solution[i+1]][solution[i]] += GlobalInfo.deltaC
 
 
 """
@@ -975,6 +976,8 @@ class Ant:
             delta_tao = 1.0 / delay[row_num][col_num]
             GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
             GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
+            GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
+
 
 class AntSystem:
     def __init__(self):
@@ -1020,6 +1023,7 @@ class AntSystem:
 
             GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho2)
             GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho2 * delta_tao * GlobalInfo.Q2
+            GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
 
     def solve(self, best_fitnesses, avg_fitnesses, min_costs):
         generation = 0
