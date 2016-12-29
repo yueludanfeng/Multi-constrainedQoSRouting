@@ -4,6 +4,7 @@ from random import random
 from math import log10
 import matplotlib.pyplot as pl
 import sys
+from random import shuffle
 
 # 输出重定向至指定的文件中，便于查看
 file_obj = open('out.txt', 'w+')
@@ -125,7 +126,8 @@ class GlobalInfo:
     # 当delay>delay_w时，将其乘以一个系数
     k = 3
     # pheromone[][] 全局信息素初始值
-    C = 1
+    # C = 1  ant_num / cost create by greedy_algorithm : 4/13=0.31
+    C = 0.31
     node_num = 0
     edge_num = 0
     src_node = 0
@@ -134,6 +136,8 @@ class GlobalInfo:
     delay_w = 0
     pheromone = None
     delta_pheromone = None
+    # 惩罚系数
+    punishment_coef = 0.7
 
     @staticmethod
     def init_param(node_num, edge_num, src_node, dst_node, ant_num, delay_w):
@@ -205,13 +209,18 @@ class Ant:
             sum_delay += delay_matrix[self.solution[i]][self.solution[i+1]]
         self.delay = sum_delay
 
-    def calculate_fitness_new(self):
+    def calculate_fitness(self):
         self.sum_delay()
         self.sum_cost()
-        self.fitness = log10(self.graph.get_total_delay() + GlobalInfo.delay_w - self.delay) \
+        if self.delay <= GlobalInfo.delay_w:
+            self.fitness = log10(self.graph.get_total_delay() + GlobalInfo.delay_w - self.delay) \
                        * (self.graph.get_total_cost() - self.cost)
+        else:
+            self.fitness = log10(self.graph.get_total_delay() + GlobalInfo.delay_w - self.delay) \
+                           * pow((self.graph.get_total_cost() - self.cost),GlobalInfo.punishment_coef)
 
-    def calculate_fitness(self):
+
+    def calculate_fitness_old(self):
         self.sum_delay()
         self.sum_cost()
         k = GlobalInfo.k
@@ -270,6 +279,7 @@ class Ant:
             print 'rand_value <= GlobalInfo.r:'
             self.next_city = res[0][0]
             return
+        shuffle(res)
         rand_prob = random()
         print 'rand_prob=',rand_prob
         sum_prob = 0
@@ -437,7 +447,8 @@ class Population:
 if __name__ == "__main__":
     # 读取文件中相关信息
     # fp = open("test03.txt","r")
-    fp = open("test03_new.txt","r")
+    # fp = open("test03_new.txt","r")
+    fp = open("test04.txt","r")
     line = fp.readline().split()
     node_num = int(line[0])
     edge_num = int(line[1])

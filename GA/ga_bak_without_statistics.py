@@ -1,21 +1,20 @@
 # coding=utf-8
 # Author:   Li xinming
 # coding=utf-8
-from math import fabs
 from math import log10
 from math import pow
-import matplotlib.pyplot as pl
 from operator import attrgetter
 from random import choice
 from random import random
+from random import sample
 from time import clock
-from sys import stdout
+
+import matplotlib.pyplot as pl
 
 
 # 输出重定向至指定的文件中，便于查看
-file_obj = open('out.txt', 'a+')
-save_stdout = stdout
-stdout = file_obj
+# file_obj = open('out.txt', 'w+')
+# stdout = file_obj
 
 
 class Graph:
@@ -99,10 +98,14 @@ class Graph:
                     self.node_adjs[row_num].append(col_num)
         print self.node_adjs
 
-
-
+class Global:
+    coef = 0.5
+    r = 2
+    delay_w = 0
+    Pm = 0
+    k = 1000
 class Chromosome:
-    punishment_coef = 0.3
+
     # 无参构造方法 也必须使用括号 eg: chromosome = Chromosome()
     def __init__(self):
         self.solution = []
@@ -143,11 +146,11 @@ class Chromosome:
         path_length = len(self.solution)
         sum_delay = 0
         sum_cost = 0
+        tmp_delay = graph.get_delay()
+        tmp_cost = graph.get_cost()
         while i < path_length - 1:
-            tmp_delay = graph.get_delay()
-            tmp_cost = graph.get_cost()
             sum_delay += tmp_delay[self.solution[i]][self.solution[i + 1]]
-            sum_cost += tmp_cost[self.solution[i]][self.solution[i + 1]]
+            sum_cost  += tmp_cost[self.solution[i]][self.solution[i + 1]]
             i += 1
         print 'delay_w = ', delay_w
         print 'sum_delay = ', sum_delay
@@ -157,7 +160,7 @@ class Chromosome:
             self.fitness = (graph.total_cost-sum_cost) *\
                            log10(graph.total_delay+delta_sum_delay)
         else:
-            self.fitness = pow(graph.total_cost - sum_cost, Chromosome.punishment_coef) * \
+            self.fitness = pow(graph.total_cost - sum_cost, Global.coef) * \
                             log10(graph.total_delay+delta_sum_delay)
 
         # if delta_sum_delay > 0:
@@ -165,7 +168,7 @@ class Chromosome:
         # else:
         #     self.fitness = sum_cost / 2
         # print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
-        self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
+        # self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
         # if delta_sum_delay > 0:
         #     print '----delta_sum_delay>=0  ', (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
         #     self.fitness = (graph.total_cost-sum_cost) * log10(graph.total_delay+delta_sum_delay)
@@ -183,7 +186,7 @@ class Chromosome:
         #    print '----delta_sum_delay>=0  ',(C-sum_cost) * np.math.log10(10+delta_sum_delay)
         #    self.fitness = (C-sum_cost) * np.math.log10(10+delta_sum_delay)
 
-    def calculate_fitness_old(self, graph, delay_w, r=0.5, k1=100.0):
+    def calculate_fitness_old(self, graph, delay_w):
         i = 0
         path_length = len(self.solution)
         sum_delay = 0
@@ -197,15 +200,172 @@ class Chromosome:
         delta_sum_delay = delay_w - sum_delay
         print 'delta_sum_delay=',delta_sum_delay
         if delta_sum_delay >= 0:
-            self.fitness = 1.0 * k1 / sum_cost
+            self.fitness = 1.0 * Global.k / sum_cost
         else:
-            self.fitness = 1.0 * k1 / (3*sum_cost)
+            self.fitness = 1.0 * Global.k / (Global.r *sum_cost)
         # if delta_sum_delay <= 0:
         #     delta_sum_delay = r
         # fz = k1 * delta_sum_delay
         # print fz/sum_cost
         # 之前fitness没有在此处赋值，导致每个个体的适应度值总是为0
         # self.fitness = fz/sum_cost
+
+    def crossover_improv2(self, chromosome2, graph, pc):
+        '''
+        根据后半段的适应度绝决定用哪段
+        :param chromosome2:
+        :param graph:
+        :param pc:
+        :return:
+        '''
+        print '----------------------------enter into cross function of Chromosome-----------------'
+        p = random()
+        res = []
+        chromosome1 = self
+        if p > pc:
+            res.append(chromosome1)
+            res.append(chromosome2)
+            return res
+        # 记录公共点集合
+        common_point_record = []
+        # 标志是否存在公共点
+        existence = 0
+        solution1 = chromosome1.get_solution()
+        solution2 = chromosome2.get_solution()
+        len_solution1 = len(solution1)
+        len_solution2 = len(solution2)
+        for g in solution1[1:len_solution1 - 1]:
+            if g in solution2[1:len_solution2 - 1]:
+                existence += 1
+                common_point_record.append(g)
+        # 如果没有相同的结点，则不交叉，直接将两个染色体返回;
+        # 如果有相同的结点，随机选择一个公共结点进行交换
+        if existence != 0:
+            random_common_point = choice(common_point_record)
+            # 根据公共结点找到起分别所在染色体1和染色体2中的索引（位置）
+            common_point_index_in_solution1 = solution1.index(random_common_point)
+            common_point_index_in_solution2 = solution2.index(random_common_point)
+            # 公共结点之前的片段
+            solution1_before = solution1[0:common_point_index_in_solution1]
+            solution2_before = solution2[0:common_point_index_in_solution2]
+            # 公共结点之后的片段
+            solution1_after = solution1[common_point_index_in_solution1:len_solution1]
+            solution2_after = solution2[common_point_index_in_solution2:len_solution2]
+            # 计算后半段的花费和，谁的小就用谁的代替原来的
+            len_solution1_after = len(solution1_after)
+            len_solution2_after = len(solution2_after)
+            cost_matrix = graph.get_cost()
+            delay_matrix = graph.get_delay()
+            # 累计时延和花费
+            sum_cost_of_solution1_after = 0
+            sum_cost_of_solution2_after = 0
+            sum_delay_of_solution1_after = 0
+            sum_delay_of_solution2_after = 0
+            for i in range(len_solution1_after - 1):
+                sum_cost_of_solution1_after += cost_matrix[solution1_after[i]][solution1_after[i + 1]]
+                sum_delay_of_solution1_after += delay_matrix[solution1_after[i]][solution1_after[i + 1]]
+            for i in range(len_solution2_after - 1):
+                sum_cost_of_solution2_after += cost_matrix[solution2_after[i]][solution2_after[i + 1]]
+                sum_delay_of_solution2_after += delay_matrix[solution2_after[i]][solution2_after[i + 1]]
+            delta_sum_delay1 = delay_w - sum_delay_of_solution1_after
+            delta_sum_delay2 = delay_w - sum_delay_of_solution2_after
+            if delta_sum_delay1 >= 0:
+                fitness1 = (graph.total_cost - sum_cost_of_solution1_after) * \
+                               log10(graph.total_delay + delta_sum_delay1)
+            else:
+                fitness1 = pow(graph.total_cost - sum_cost_of_solution1_after, Global.coef) * \
+                               log10(graph.total_delay + delta_sum_delay1)
+            if delta_sum_delay2 >= 0:
+                fitness2 = (graph.total_cost - sum_cost_of_solution2_after) * \
+                               log10(graph.total_delay + delta_sum_delay2)
+            else:
+                fitness2 = pow(graph.total_cost - sum_cost_of_solution2_after, Global.coef) * \
+                               log10(graph.total_delay + delta_sum_delay2)
+            if fitness1 > fitness2:
+                solution2_after = solution1_after
+            else:
+                solution1_after = solution2_after
+
+            solution1 = solution1_before + solution1_after
+            solution2 = solution2_before + solution2_after
+            chromosome1.set_solution(solution1)
+            chromosome2.set_solution(solution2)
+            list_chromosome = [chromosome1, chromosome2]
+            for chromosome in list_chromosome:
+                res.append(chromosome.solve_loop(graph))
+        else:
+            # 记录结果并返回
+            res.append(chromosome1)
+            res.append(chromosome2)
+        return res
+
+    def crossover_improv1(self, chromosome2, graph, pc):
+        '''
+        根据后半段的花费决定用那段
+        :param chromosome2:
+        :param graph:
+        :param pc:
+        :return:
+        '''
+        print '----------------------------enter into cross function of Chromosome-----------------'
+        p = random()
+        res = []
+        chromosome1 = self
+        if p > pc:
+            res.append(chromosome1)
+            res.append(chromosome2)
+            return res
+        # 记录公共点集合
+        common_point_record = []
+        # 标志是否存在公共点
+        existence = 0
+        solution1 = chromosome1.get_solution()
+        solution2 = chromosome2.get_solution()
+        len_solution1 = len(solution1)
+        len_solution2 = len(solution2)
+        for g in solution1[1:len_solution1 - 1]:
+            if g in solution2[1:len_solution2 - 1]:
+                existence += 1
+                common_point_record.append(g)
+        # 如果没有相同的结点，则不交叉，直接将两个染色体返回;
+        # 如果有相同的结点，随机选择一个公共结点进行交换
+        if existence != 0:
+            random_common_point = choice(common_point_record)
+            # 根据公共结点找到起分别所在染色体1和染色体2中的索引（位置）
+            common_point_index_in_solution1 = solution1.index(random_common_point)
+            common_point_index_in_solution2 = solution2.index(random_common_point)
+            # 公共结点之前的片段
+            solution1_before = solution1[0:common_point_index_in_solution1]
+            solution2_before = solution2[0:common_point_index_in_solution2]
+            # 公共结点之后的片段
+            solution1_after = solution1[common_point_index_in_solution1:len_solution1]
+            solution2_after = solution2[common_point_index_in_solution2:len_solution2]
+            # 计算后半段的花费和，谁的小就用谁的代替原来的
+            len_solution1_after = len(solution1_after)
+            len_solution2_after = len(solution2_after)
+            cost_matrix = graph.get_cost()
+            sum_cost_of_solution1_after = 0
+            sum_cost_of_solution2_after = 0
+            for i in range(len_solution1_after-1):
+                sum_cost_of_solution1_after += cost_matrix[solution1_after[i]][solution1_after[i+1]]
+            for i in range(len_solution2_after-1):
+                sum_cost_of_solution2_after += cost_matrix[solution2_after[i]][solution2_after[i+1]]
+            if sum_cost_of_solution1_after > sum_cost_of_solution2_after:
+                solution2_after = solution1_after
+            else:
+                solution1_after = solution2_after
+            solution1 = solution1_before + solution1_after
+            solution2 = solution2_before + solution2_after
+            chromosome1.set_solution(solution1)
+            chromosome2.set_solution(solution2)
+            list_chromosome = [chromosome1, chromosome2]
+            for chromosome in list_chromosome:
+                res.append(chromosome.solve_loop(graph))
+        else:
+            # 记录结果并返回
+            res.append(chromosome1)
+            res.append(chromosome2)
+        return res
 
     def crossover(self, chromosome2, graph, pc):
         print '----------------------------enter into cross function of Chromosome-----------------'
@@ -371,6 +531,7 @@ class Chromosome:
         mutate_node_index = self.solution.index(mutate_node)
         # 已访问结点
         visited = []
+
         # 可(未)访问结点
         tabu = []
         # 变异结点可以变异成的结点,此时至少有一个
@@ -390,9 +551,11 @@ class Chromosome:
         current_node = choice(candidate)
         found = False
         tmp_solution = self.solution[0:mutate_node_index]
-        while not found:
+        # while not found:
+        while len(tabu) != 0:
             tmp_solution.append(current_node)
             visited.append(current_node)
+            tabu.remove(current_node)
             for node in self.solution[-1:mutate_node_index:-1]:
                 if graph.get_connection_status(node, current_node):
                     found = True
@@ -419,7 +582,7 @@ class Chromosome:
     def mutate(self, graph, pm):
         print '----------------------------enter into Chromosome mutate-----------'
         random_p = random()
-        if random_p > pm:
+        if random_p > Global.pm:
             return
         # 可能会变异的结点
         node_may_be_mutated = []
@@ -446,6 +609,7 @@ class Population:
     def random_chromosome(graph, src_node, des_node):
         print 'enter into random_chromosome'
         visited = [src_node]
+        # tabu 在此处表示可以访问的结点
         tabu = [n for n in range(graph.node_num)]
         tabu.remove(src_node)
         tabu_bak = tabu
@@ -530,6 +694,8 @@ class Population:
         self.avg_fitness = 0
         # 最好的解
         self.best_solution = []
+        # 最优解对应的时延之和
+        self.respective_delay = 0
         # 交配池
         self.mate_pool = []
         # 根据des_code逆向找到一条路径即为一个解
@@ -563,11 +729,49 @@ class Population:
         if self.best_fitness < chromosome.get_fitness():
             self.best_fitness = chromosome.get_fitness()
             self.best_solution = chromosome.get_solution()
+            delay_matrix = self.graph.get_delay()
+            sum_delay = 0
+            solution_len = len(self.best_solution)
+            for i in range(solution_len-1):
+                sum_delay += delay_matrix[self.best_solution[i]][self.best_solution[i+1]]
+            self.respective_delay = sum_delay
         else:
             chromosome = Chromosome()
             chromosome.set_solution(self.best_solution)
             chromosome.set_fitness(self.best_fitness)
             self.chromosomes[self.pop_size-1] = chromosome
+
+
+    def get_best_one_from_list(self, candidates=None):
+        if candidates == None:
+            return None
+        max_fitness = 0
+        index = -1
+        for chromosome in candidates:
+            index += 1
+            fitness = chromosome.get_fitness()
+            if fitness > max_fitness:
+                max_fitness = fitness
+                max_index = index
+        return candidates[index]
+
+    def choose_jbs(self):
+        print '--------------------------enter into choose function----------------------------'
+        print 'self.best_fitness=', self.best_fitness
+        print 'self.best_solution=', self.best_solution
+        best_chromosome = Chromosome()
+        best_chromosome.set_solution(self.best_solution)
+        best_chromosome.set_fitness(self.best_fitness)
+        self.mate_pool = [best_chromosome]
+        for num in range(self.pop_size - 1):
+            candidates = sample(self.chromosomes,self.pop_size/2)
+            self.mate_pool.append(self.get_best_one_from_list(candidates))
+        self.mate_pool.sort()
+        self.mate_pool.reverse()
+        print 'len_mate_pool=', len(self.mate_pool)
+        print 'mate_pool='
+        for chrom in self.mate_pool:
+            print chrom.get_solution()
 
     # 选择pop_size-1个个体，加上最佳适应度个体，放入交配池，为遗传操作做准备
     def choose(self):
@@ -586,6 +790,8 @@ class Population:
             total_fitness = 0
             print 'self.pop_size=',self.pop_size
             for int_i in range(self.pop_size):
+                print 'self.pop_size = ',self.pop_size
+                print 'int_i =', int_i
                 total_fitness += self.chromosomes[int_i].get_fitness()
             for int_i in range(self.pop_size):
                 sum_fitness += self.chromosomes[int_i].get_fitness()*1.0/total_fitness
@@ -618,7 +824,7 @@ class Population:
             print 'chromosome one to be crossovered=',self.mate_pool[num*2].get_solution()
             print 'chromosome two to be crossovered=',self.mate_pool[num*2+1].get_solution()
             # mate_pool_bak += self.cross(self.mate_pool[num*2], self.mate_pool[num*2+1])
-            mate_pool_bak += self.mate_pool[num*2].crossover(self.mate_pool[num*2+1], self.graph, self.pc)
+            mate_pool_bak += self.mate_pool[num*2].crossover_improv2(self.mate_pool[num*2+1], self.graph, self.pc)
             int_times += 1
         self.mate_pool = mate_pool_bak
         print 'mate_pool='
@@ -662,7 +868,9 @@ if __name__ == '__main__':
     starttime = clock()
     # f = open('test01.txt','r')
     # f = open('test02.txt', 'r')
-    f = open('test03.txt', 'r')
+    # f = open('test03.txt', 'r')
+    # f = open('test03_new.txt', 'r')
+    f = open('test04.txt', 'r')
     line = f.readline().split()
     print line
     node_num = int(line[0])
@@ -677,7 +885,9 @@ if __name__ == '__main__':
     pop_scale = int(line[2])
     pc = float(line[3])
     pm = float(line[4])
+    Global.pm = pm
     delay_w = int(line[5])
+    Global.delay_w  = delay_w
     # (row_num, col_num, BandWidth, Delay, Cost)
     # param_length会随着的参数的增加而增大
     param_length = 5
@@ -713,82 +923,74 @@ if __name__ == '__main__':
     # pm = 0.001
     # #时延约束
     # delay_w = 8
-    TIMES = 1
-    best_generation = 0
-    for times in range(TIMES):
-        population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
-        pop_size = population.get_popsize()
-        print 'pop_size=', pop_size
+    population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
+    pop_size = population.get_popsize()
+    print 'pop_size=', pop_size
 
-        generations = 0
-        MAX_GENERATION = 100
-        best_fitnesses = []
-        avg_fitnesses = []
-        min_costs = []
-        flag = True
-        count = 0
-        TIME = 1000
-        sum_generation = 0
-        ratio = 0
+    generations = 0
+    MAX_GENERATION = 100
+    best_fitnesses = []
+    avg_fitnesses = []
+    min_costs = []
+    flag = True
+    count = 0
+    TIME = 1000
+    sum_generation = 0
+    ratio = 0
+    population.calculate_fitness()
+    while generations < MAX_GENERATION:
+        print '--------------------generations=>>>>>', generations, '<<<<--------------'
+        # 计算种群中所以个体的适应度值
+        # population.calculate_fitness()
+        for i in range(pop_size):
+            # s1 = Population.random_chromosome(graph, 0, 4)
+            s1 = population.chromosomes[i]
+            print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
+        population.choose()
+        # population.choose_jbs()
+        population.crossover()
+        population.mutate()
+        population.update()
         population.calculate_fitness()
-        while generations < MAX_GENERATION:
-            print '--------------------generations=>>>>>', generations, '<<<<--------------'
-            # 计算种群中所以个体的适应度值
-            # population.calculate_fitness()
-            for i in range(pop_size):
-                # s1 = Population.random_chromosome(graph, 0, 4)
-                s1 = population.chromosomes[i]
-                print 'i=', i, ': ', s1.get_solution(), ";Fitness=%.6f" % (s1.get_fitness())
-            population.choose()
-            population.crossover()
-            population.mutate()
-            population.update()
-            population.calculate_fitness()
-            avg_fitness = population.avg_fitness
-            avg_fitnesses.append(avg_fitness)
-            best_fitnesses.append(population.get_best_fitness())
-            best_chromosome = Chromosome()
-            best_chromosome.set_solution(population.best_solution)
-            min_cost = best_chromosome.get_total_cost(graph)
-            min_costs.append(min_cost)
-            # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
-            #     sum_generation += generations
-            #     flag = False
-            generations += 1
-        tmp = min_costs[MAX_GENERATION-1]
-        generation_index = MAX_GENERATION
-        for value in min_costs[::-1]:
-            if tmp == value:
-                generation_index -= 1
-            elif value > tmp:
-                generation_index += 1
-                break
-        best_generation += generation_index
-    best_generation /= TIMES
-    print 'best_generation = ',best_generation
+        avg_fitness = population.avg_fitness
+        avg_fitnesses.append(avg_fitness)
+        best_fitnesses.append(population.get_best_fitness())
+        best_chromosome = Chromosome()
+        best_chromosome.set_solution(population.best_solution)
+        min_cost = best_chromosome.get_total_cost(graph)
+        min_costs.append(min_cost)
+        # if flag and fabs(population.get_best_fitness()*100-2.77777777778) >= 1.0e-11:
+        #     sum_generation += generations
+        #     flag = False
+        # 自适应变异概率,随着种群的平均适应度值变大，其变异概率应该减小
+        # Global.pm = 1 - population.avg_fitness/population.best_fitness
+        generations += 1
     # long running
     endtime = clock()
     # 只计算程序运行的CPU时间
     print "program costs time is %.8f s" % (endtime - starttime)
-    print 'best_generation = ',best_generation
-    stdout = save_stdout
     x = [i for i in range(MAX_GENERATION)]
     y = best_fitnesses
     z = avg_fitnesses
     u = min_costs
-    pl.figure('node_num=%d, edge_num=%d, pop_scale=%d, pc=%f, pm=%f, global_min_cost=%d, best_solution=%s' % (node_num, edge_num, pop_scale, pc, pm, min_cost, population.best_solution))
+    info = 'node_num=%d, edge_num=%d, pop_scale=%d, r=%.3f pc=%.3f, pm=%.3f, global_min_cost=%d, best_solution=%s, respective_delay=%d'
+    value = (node_num, edge_num, pop_scale,Global.r, pc, pm, min_cost, population.best_solution, population.respective_delay)
+    pl.figure(info % value)
     pl.subplot(211)
     # pl.xlabel('generation')
     pl.ylabel('fitness')
     pl.plot(x, y, 'r-', label='best_fitness')
     pl.plot(x, z, 'b.-', label='avg_fitness')
-    pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    # pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    # 将标注放在右下角
+    pl.legend(loc='lower right')
     pl.subplot(212)
     pl.xlabel('generation')
     pl.ylabel('cost')
     pl.plot(x, u, 'r.-', label='min_cost')
     pl.legend()
     # pl.text(90, 4, '--min_cost', color='red')
+
 
     pl.show()
 #qq

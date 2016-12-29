@@ -5,6 +5,7 @@
 from random import choice
 from random import random
 from random import uniform
+from random import shuffle
 from operator import attrgetter
 from math import log10
 import matplotlib.pyplot as pl
@@ -123,7 +124,7 @@ class GlobalInfo:
     # 用于标志是否是第一次进行种群适应度值计算，如果是第一次，则不
     count_calculate = 0
     # 表示如果GA算法中best_fitness连续STOP_TIME次停滞不变，则进入蚁群算法
-    STOP_TIME = 5
+    STOP_TIME = 3
     # GA算法最佳适应度值停滞次数
     stop_time = 0
     ACO_MAX_GENERATION = 100
@@ -134,24 +135,25 @@ class GlobalInfo:
     # Q1 / delat_delay
     Q1 = 150.0
     # Q2 / delat_cost
-    Q2 = 150.0
+    Q2 = 15.0
     # 启发因子
     alpha = 1
     # 期望因子
     beta = 1
     # 信息素挥因子
     rho = 0.2
-    rho2 = 0.2
+    rho2 = rho
     # 如果随机数小于或等于r则选择max{pher(r,s)}
     # 否则按照概率公式进行转移
-    r = 0.5
+    r = 0.1
     # 当delay>delay_w时，将其乘以一个系数
     # GA算法中计算fitness时的系数 (对算法的收敛速度有影响)
     coef = 3
     # pheromone[][] 全局信息素初始值
-    C = 1
+    C = 0.31
     # pheromone[][]全局信息素的增量，这是由于遗传算法的解导致信息素的更新
-    deltaC = 0.1
+    deltaC = 1
+    k = 10
     node_num = 0
     edge_num = 0
     src_node = 0
@@ -163,6 +165,10 @@ class GlobalInfo:
     pop_scale = 0
     pheromone = None
     delta_pheromone = None
+    # 惩罚系数
+    punishment_coef = 0.7
+    c1=0.8
+    c2=1-c1
 
     @staticmethod
     def init_param(node_num, edge_num, src_node, dst_node,
@@ -186,7 +192,8 @@ class GlobalInfo:
     def read_info_from_file():
         # 从文件中读取信息并初始化GlobalInfo类和Graph类
         # fp = open("test03.txt", 'r')
-        fp = open("test03_new.txt", 'r')
+        # fp = open("test03_new.txt", 'r')
+        fp = open("test04.txt", 'r')
         line = fp.readline().split()
         node_num = int(line[0])
         edge_num = int(line[1])
@@ -270,7 +277,7 @@ class Chromosome:
     def get_solution(self):
         return self.solution
 
-    def calculate_fitness(self, r=3, k1=1000.0):
+    def calculate_fitness_old(self, r=3, k1=1000.0):
         """
         功能： 计算个体的适应度值fitness,同时计算其总时延delays
         :param r:   惩罚系数
@@ -302,7 +309,7 @@ class Chromosome:
         else:
             self.fitness = (total_cost+0.0)/(GlobalInfo.coef * sum_cost)
 
-    def calculate_fitness_new(self):
+    def calculate_fitness(self):
         i = 0
         path_length = len(self.solution)
         sum_delay = 0
@@ -320,7 +327,7 @@ class Chromosome:
             self.fitness = (GlobalInfo.graph.total_cost - sum_cost) * \
                            log10(GlobalInfo.graph.total_delay + delta_sum_delay)
         else:
-            self.fitness = pow(GlobalInfo.graph.total_cost - sum_cost, 0.5) * \
+            self.fitness = pow(GlobalInfo.graph.total_cost - sum_cost, GlobalInfo.punishment_coef) * \
                            log10(GlobalInfo.graph.total_delay + delta_sum_delay)
 
     def solve_loop(self):
@@ -593,12 +600,15 @@ class Population:
         sum_fitness = 0
         for chromosome in self.chromosomes:
             chromosome.calculate_fitness()
+            print 'fitness as follows:',chromosome.get_fitness()
             sum_fitness += chromosome.get_fitness()
         self.avg_fitness = sum_fitness / self.pop_size
         # 按照适应度值进行从大大小排序并得到最佳适应度值以及对应的解
-        sorted(self.chromosomes,key=attrgetter('fitness'),reverse=True)
+        # 刚开始没有将sorted的返回值赋值给self.chromosomes导致平均值比最大值还大，去死吧
+        self.chromosomes = sorted(self.chromosomes,key=attrgetter('fitness'),reverse=True)
         best_chromosome    = self.chromosomes[0]
         best_fitness = best_chromosome.get_fitness()
+        print 'best=',best_chromosome.get_fitness()
         #  如果下一代种群中最佳适应度值比当前的大，则更新最佳适应个体信息
         if best_fitness > self.best_fitness:
             self.best_fitness  = best_chromosome.get_fitness()
@@ -711,6 +721,7 @@ class Population:
             print 'before pop'
             print solution
             tmp_chromosome = Chromosome()
+            # 去除首尾结点
             tmp_chromosome.set_solution(solution[1:len(solution)-1])
             res.append(tmp_chromosome)
         solution0 = res[0].get_solution()
@@ -727,15 +738,116 @@ class Population:
         index0 = solution0.index(same_point)
         index1 = solution1.index(same_point)
         solution0_before_part = solution0[0:index0]
-        solution0_after_part  = solution0[index0:]
+        solution0_after_part  = solution0[index0:]+[GlobalInfo.dst_node]
 
         solution1_before_part = solution1[0:index1]
-        solution1_after_part  = solution1[index1:]
+        solution1_after_part  = solution1[index1:]+[GlobalInfo.dst_node]
+
+        cost_matrix = GlobalInfo.graph.get_cost()
+        delay_matrix = GlobalInfo.graph.get_delay()
+        sum_cost0 = 0
+        sum_cost1 = 0
+        sum_delay0 = 0
+        sum_delay1 = 0
+        solution0_after_part_len = len(solution0_after_part)
+        solution1_after_part_len = len(solution1_after_part)
+
+        for i in range(solution0_after_part_len - 1):
+            sum_cost0 += cost_matrix[solution0_after_part[i]][solution0_after_part[i+1]]
+            sum_delay0 += delay_matrix[solution0_after_part[i]][solution0_after_part[i+1]]
+        delta_sum_delay0 = GlobalInfo.delay_w - sum_delay0
+        if delta_sum_delay0>=0:
+            fitness0 = log10(GlobalInfo.graph.total_delay+delta_sum_delay0)*\
+                       (GlobalInfo.graph.total_cost-sum_cost0)
+        else:
+            fitness0 = log10(GlobalInfo.graph.total_delay+delta_sum_delay0)* \
+                       pow(GlobalInfo.graph.total_cost-sum_cost0,GlobalInfo.punishment_coef)
+
+        for i in range(solution1_after_part_len - 1):
+            sum_cost1 += cost_matrix[solution1_after_part[i]][solution1_after_part[i+1]]
+            sum_delay1 += delay_matrix[solution1_after_part[i]][solution1_after_part[i+1]]
+        delta_sum_delay1 = GlobalInfo.delay_w - sum_delay1
+        if delta_sum_delay1>=0:
+            fitness1 = log10(GlobalInfo.graph.total_delay+delta_sum_delay1)* \
+                       (GlobalInfo.graph.total_cost-sum_cost1)
+        else:
+            fitness1 = log10(GlobalInfo.graph.total_delay+delta_sum_delay1)* \
+                       pow(GlobalInfo.graph.total_cost-sum_cost1,GlobalInfo.punishment_coef)
+
+        if fitness0>fitness1:
+            # 谁的适应度值大，后半段就选择谁的
+            solution1_after_part = solution0_after_part
+        else:
+            solution0_after_part = solution1_after_part
+
         chromosome0 = Chromosome()
-        chromosome0.set_solution([GlobalInfo.src_node]+solution0_before_part+solution1_after_part+[GlobalInfo.dst_node])
+        chromosome0.set_solution([GlobalInfo.src_node]+solution0_before_part+solution0_after_part)
         result.append(chromosome0)
         chromosome1 = Chromosome()
-        chromosome1.set_solution([GlobalInfo.src_node]+solution1_before_part+solution0_after_part+[GlobalInfo.dst_node])
+        chromosome1.set_solution([GlobalInfo.src_node]+solution1_before_part+solution1_after_part)
+        result.append(chromosome1)
+
+        for chromosome in result:
+            print chromosome.get_solution()
+        print '-----before solve loop'
+        for chromosome in result:
+            chromosome.solve_loop()
+        return result
+
+    @staticmethod
+    def static_crossover_old(chromosome1, chromosome2):
+        """
+        功能：输入两个个体进行交叉，输出两个个体
+        :param chromosome1:个体1
+        :param chromosome2:个体2
+        :return:经过交叉操作之后的两个个体
+        """
+        print '---------enter into static_crossover---'
+        chromosomes = [chromosome1, chromosome2]
+        for chromosome in chromosomes:
+            print chromosome.get_solution()
+        if chromosome1.get_solution() == chromosome2.get_solution():
+            return chromosomes
+        rand_value = random()
+        # 依照概率进行交叉
+        if rand_value > GlobalInfo.Pc:
+            return chromosomes
+        res = []
+        result = []
+        same_points = []
+        # 除去首尾，找到相同结点集，随机选择一个相同结点，相同结点之后进行交换
+        for chromosome in chromosomes:
+            solution = chromosome.get_solution()
+            print 'before pop'
+            print solution
+            tmp_chromosome = Chromosome()
+            tmp_chromosome.set_solution(solution[1:len(solution) - 1])
+            res.append(tmp_chromosome)
+        solution0 = res[0].get_solution()
+        solution1 = res[1].get_solution()
+        for node in solution0:
+            if node in solution1:
+                same_points.append(node)
+        if len(same_points) == 0:
+            # 没有相同结点,原样返回
+            return chromosomes
+        # 否则有相同结点，随机选择一个
+        same_point = choice(same_points)
+        print 'same_point=', same_point
+        index0 = solution0.index(same_point)
+        index1 = solution1.index(same_point)
+        solution0_before_part = solution0[0:index0]
+        solution0_after_part = solution0[index0:]
+
+        solution1_before_part = solution1[0:index1]
+        solution1_after_part = solution1[index1:]
+        chromosome0 = Chromosome()
+        chromosome0.set_solution(
+            [GlobalInfo.src_node] + solution0_before_part + solution1_after_part + [GlobalInfo.dst_node])
+        result.append(chromosome0)
+        chromosome1 = Chromosome()
+        chromosome1.set_solution(
+            [GlobalInfo.src_node] + solution1_before_part + solution0_after_part + [GlobalInfo.dst_node])
         result.append(chromosome1)
 
         for chromosome in result:
@@ -766,7 +878,7 @@ class Population:
             population.crossover()
             population.mutate()
             population.update()
-            if GlobalInfo.stop_time + 1== GlobalInfo.STOP_TIME:
+            if GlobalInfo.stop_time == GlobalInfo.STOP_TIME:
                 GlobalInfo.current_generation = generation
                 break
             generation += 1
@@ -788,8 +900,8 @@ class Transaction:
             solution = chromosome.get_solution()
             solution_len = len(solution)
             for i in range(solution_len - 1):
-                GlobalInfo.pheromone[solution[i]][solution[i+1]] += GlobalInfo.deltaC
-                GlobalInfo.pheromone[solution[i+1]][solution[i]] += GlobalInfo.deltaC
+                GlobalInfo.pheromone[solution[i]][solution[i+1]] += GlobalInfo.deltaC*GlobalInfo.k
+                GlobalInfo.pheromone[solution[i+1]][solution[i]] += GlobalInfo.deltaC*GlobalInfo.k
 
 
 """
@@ -830,11 +942,31 @@ class Ant:
     def set_fitness(self, fitness_value):
         self.fitness = fitness_value
 
-    def calculate_fitness_new(self):
-        self.fitness = log10(GlobalInfo.graph.get_total_delay() + GlobalInfo.delay_w - self.delays) \
-                       * (GlobalInfo.graph.get_total_cost() - self.cost)
-
     def calculate_fitness(self):
+        # self.fitness = log10(GlobalInfo.graph.get_total_delay() + GlobalInfo.delay_w - self.delays) \
+        #                * (GlobalInfo.graph.get_total_cost() - self.cost)
+        i = 0
+        path_length = len(self.solution)
+        sum_delay = 0
+        sum_cost = 0
+        while i < path_length - 1:
+            tmp_delay = GlobalInfo.graph.get_delay()
+            tmp_cost = GlobalInfo.graph.get_cost()
+            sum_delay += tmp_delay[self.solution[i]][self.solution[i + 1]]
+            sum_cost += tmp_cost[self.solution[i]][self.solution[i + 1]]
+            i += 1
+        print 'sum_delay = ', sum_delay
+        delta_sum_delay = GlobalInfo.delay_w - sum_delay
+
+        if delta_sum_delay >= 0:
+            self.fitness = (GlobalInfo.graph.total_cost - sum_cost) * \
+                           log10(GlobalInfo.graph.total_delay + delta_sum_delay)
+        else:
+            self.fitness = pow(GlobalInfo.graph.total_cost - sum_cost, GlobalInfo.punishment_coef) * \
+                           log10(GlobalInfo.graph.total_delay + delta_sum_delay)
+
+
+    def calculate_fitness_old(self):
         total_cost  = GlobalInfo.graph.get_total_cost()
         cost = self.get_cost()
         print 'cost=',cost
@@ -965,18 +1097,23 @@ class Ant:
         print '---------enter into update_pheromone-----'
         path_length = len(self.solution)
         delay = GlobalInfo.graph.get_delay()
+        cost = GlobalInfo.graph.get_cost()
         print 'delay=', delay
         print 'solution before update pheromone=', self.solution
-        for i in range(path_length - 1):
-            row_num = self.solution[i]
-            col_num = self.solution[i + 1]
-            if delay[row_num][col_num] == 0:
-                print '00000000000000000'
-                continue
-            delta_tao = 1.0 / delay[row_num][col_num]
-            GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
-            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
-            GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
+        # 只更新时延约束满足的路径
+        if delay <= GlobalInfo.delay_w:
+            for i in range(path_length - 1):
+                row_num = self.solution[i]
+                col_num = self.solution[i + 1]
+                if delay[row_num][col_num] == 0:
+                     print '00000000000000000'
+                     continue
+                delta_tao = 1.0 / (GlobalInfo.c1*delay[row_num][col_num]+GlobalInfo.c2*cost[row_num][col_num])
+                GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho)
+                # GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho * delta_tao * GlobalInfo.Q1
+                GlobalInfo.pheromone[row_num][col_num] +=  delta_tao * GlobalInfo.Q1
+                GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
+
 
 
 class AntSystem:
@@ -1022,7 +1159,8 @@ class AntSystem:
             delta_tao = 1.0 / cost_matrix[row_num][col_num]
 
             GlobalInfo.pheromone[row_num][col_num] *= (1 - GlobalInfo.rho2)
-            GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho2 * delta_tao * GlobalInfo.Q2
+            # GlobalInfo.pheromone[row_num][col_num] += GlobalInfo.rho2 * delta_tao * GlobalInfo.Q2
+            GlobalInfo.pheromone[row_num][col_num] +=  delta_tao * GlobalInfo.Q2
             GlobalInfo.pheromone[col_num][row_num] = GlobalInfo.pheromone[row_num][col_num]
 
     def solve(self, best_fitnesses, avg_fitnesses, min_costs):
@@ -1038,6 +1176,12 @@ class AntSystem:
             print 'generation = ', generation
             print 'current best_fitness = ', self.best_fitness
             print 'current best_solution = ', self.best_solution
+            cost_matrix = GlobalInfo.graph.get_cost()
+            cost_sum = 0
+            len_best_solutoin = len(self.best_solution)
+            for i in range(len_best_solutoin-1):
+                cost_sum += cost_matrix[self.best_solution[i]][self.best_solution[i+1]]
+            print 'best_cost=',cost_sum
             print 'current best_cost = ', self.best_cost
             print 'current best_delay = ', self.best_delay
             best_fitnesses.append(self.best_fitness)
@@ -1101,8 +1245,8 @@ if __name__ == "__main__":
     else:
         yAxis2 = yAxis + 5
     xAxis2 = xAxis + 20
-    pl.annotate('GA->ACO', xy=(xAxis, yAxis), xytext=(xAxis2, yAxis2), \
-                arrowprops=dict(facecolor='green', shrink=0.1))
+    # pl.annotate('GA->ACO k=%s,switch_generation=%d' % (GlobalInfo.k,GlobalInfo.current_generation), xy=(xAxis, yAxis), xytext=(xAxis2, yAxis2), \
+    #             arrowprops=dict(facecolor='green', shrink=0.1))
     pl.subplot(212)
     pl.xlabel('generation')
     pl.ylabel('cost')
@@ -1111,10 +1255,10 @@ if __name__ == "__main__":
     pl.legend()
     xAxis3 = xAxis
     yAxis3 = GlobalInfo.min_costs[xAxis3]
-    xAxis4 = xAxis3 + 20
-    yAxis4 = yAxis3 + 10
-    pl.annotate('GA->ACO', xy=(xAxis3, yAxis3), xytext=(xAxis4, yAxis4), \
-                arrowprops=dict(facecolor='green', shrink=0.1))
+    xAxis4 = xAxis3
+    yAxis4 = yAxis3
+    pl.annotate('GA->ACO switch_generation=%d'%GlobalInfo.current_generation, xy=(xAxis3, yAxis3), xytext=(xAxis4, yAxis4), \
+                arrowprops=dict(facecolor='green', shrink=0.5))
 
     pl.show()
 
