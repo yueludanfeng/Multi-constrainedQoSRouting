@@ -2,9 +2,9 @@
 from math import pow
 from random import random
 from math import log10
-import matplotlib.pyplot as pl
 import sys
 from random import shuffle
+
 
 # 输出重定向至指定的文件中，便于查看
 file_obj = open('out.txt', 'w+')
@@ -122,6 +122,7 @@ class GlobalInfo:
     rho2 = rho
     # 如果随机数小于或等于r则选择max{pher(r,s)}
     # 否则按照概率公式进行转移
+    # 不过，既然这样，那还可以用锦标赛选择方式，也能达到这个目的，不是吗？可以试一试
     r = 0.1
     # 当delay>delay_w时，将其乘以一个系数
     k = 3
@@ -447,8 +448,8 @@ class Population:
 if __name__ == "__main__":
     # 读取文件中相关信息
     # fp = open("test03.txt","r")
-    # fp = open("test03_new.txt","r")
-    fp = open("test04.txt","r")
+    fp = open("test03_new.txt","r")
+    # fp = open("test04.txt","r")
     line = fp.readline().split()
     node_num = int(line[0])
     edge_num = int(line[1])
@@ -514,21 +515,6 @@ if __name__ == "__main__":
              avg_best_generation)
     info = 'node_num=%d, edge_num=%d, ant_num=%d, rho=%.2f,c1=%d, r=%.2f,Q1=%.2f, Q2=%.2f, global_min_cost=%d,' \
            ' respective_delay=%d, best_solution=%s, best_generation=%d, avg_best_generation=%d' % value
-    pl.figure(info)
-    pl.subplot(211)
-    # pl.ylim(-8,20)
-    # pl.xlabel('generation')
-    pl.ylabel('fitness')
-    pl.plot(x, y, 'r-', label='best_fitness')
-    pl.plot(x, z, 'b.-', label='avg_fitness')
-    pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
-    # pl.legend(loc='lower right')
-    pl.subplot(212)
-    pl.xlabel('generation')
-    pl.ylabel('cost')
-    pl.plot(x, u, 'r.-', label='min_cost')
-    pl.legend()
-    # pl.text(90, 4, '--min_cost', color='red')
-
-    pl.show()
+    print 'best_solution=',population.best_solution
+    print 'iter_time=',avg_best_generation
 
