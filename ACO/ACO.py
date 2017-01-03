@@ -447,8 +447,8 @@ class Population:
 if __name__ == "__main__":
     # 读取文件中相关信息
     # fp = open("test03.txt","r")
-    # fp = open("test03_new.txt","r")
-    fp = open("test04.txt","r")
+    fp = open("test03_new.txt","r")
+    # fp = open("test04.txt","r")
     line = fp.readline().split()
     node_num = int(line[0])
     edge_num = int(line[1])
@@ -488,6 +488,7 @@ if __name__ == "__main__":
         best_fitnesses = []
         avg_fitnesses = []
         min_costs = []
+        # 在solve（）中，外部循环会迭代100次
         population.solve(best_fitnesses, avg_fitnesses, min_costs)
         # sys.stdout.close()
         # sys.stdout = save_stdout

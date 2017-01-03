@@ -1,5 +1,10 @@
 # coding=utf-8
 # Author:   Lixinming
-a = [1,2,3]
-print a[1:]
-print a+[1]
+
+import os
+os.chdir("../ACO")
+print os.getcwd()
+f = open("rate.txt","a+")
+
+f.flush()
+

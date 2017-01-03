@@ -105,7 +105,7 @@ class GlobalInfo:
     #第一代以后将count重新赋值为1，保证第一次迭代不会出现最优解
     count = 0
     # 当beta较大时,收敛速度较快
-    TIMES = 1
+    TIMES = 10
     MAX_GENERATION = 100
     # Q1 / delat_delay
     Q1 = 150.0
@@ -481,8 +481,8 @@ if __name__ == "__main__":
     #     ant = Ant(GlobalInfo.src_node, obj_graph)
     #     ant.solve()
     avg_best_generation = 0
-    TIMES = GlobalInfo.TIMES
-    for times in range(TIMES):
+    # TIMES = GlobalInfo.TIMES
+    for times in range(GlobalInfo.TIMES):
         population = Population(obj_graph)
         # population.find_path()
         # population.update_individual_pheromone()
@@ -501,13 +501,15 @@ if __name__ == "__main__":
         best_generation = Population.MAX_GENERATION
         for cost in min_costs[::-1]:
             if cost == tmp:
+                print 'cost=',cost
+                print 'tmp=',tmp
                 best_generation -= 1
-            elif cost > tmp:
-                best_generation += 1
+            else:
                 break
+        print 'best_generation=',best_generation
         avg_best_generation += best_generation
 
-    avg_best_generation /= TIMES
+    # avg_best_generation /= TIMES
     sys.stdout = save_stdout
     print "avg_best_generation =", avg_best_generation
     value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.ant_num, GlobalInfo.rho,GlobalInfo.c1, GlobalInfo.r, GlobalInfo.Q1,
@@ -517,4 +519,5 @@ if __name__ == "__main__":
            ' respective_delay=%d, best_solution=%s, best_generation=%d, avg_best_generation=%d' % value
     print 'best_solution=',population.best_solution
     print 'iter_time=',avg_best_generation
+    print 'iter_time=',avg_best_generation/(GlobalInfo.TIMES*1.0)
 
