@@ -98,11 +98,15 @@ class Graph:
         #print self.node_adjs
 
 class Global:
+    # 惩罚系数 of calculate_fitness()
     coef = 0.3
+    # 惩罚系数 of calculate_fiteness_old()
     r = 2
     delay_w = 0
     Pm = 0
+    # 协调系数 of calculate_fitness_old()
     k = 1000
+    min_cost = 0
 
 class Chromosome:
 
@@ -883,12 +887,15 @@ if __name__ == '__main__':
     # f = open('test01.txt','r')
     # f = open('test02.txt', 'r')
     # f = open('test03.txt', 'r')
+    # 打开测试文件
     f = open('test03_new.txt', 'r')
     # f = open('test04.txt', 'r')
     line = f.readline().split()
     #print line
     node_num = int(line[0])
     edge_num = int(line[1])
+    Global.min_cost = int(line[2])
+
     #print node_num
     #print edge_num
     graph = Graph(node_num, edge_num)
@@ -903,7 +910,7 @@ if __name__ == '__main__':
     delay_w = int(line[5])
     Global.delay_w  = delay_w
     # (row_num, col_num, BandWidth, Delay, Cost)
-    # param_length会随着的参数的增加而增大
+    # param_length会随着的度量参数的增加而增大
     param_length = 5
     graph.init_edge_measure(f, param_length)
     graph.init_node_adjs()
@@ -959,7 +966,8 @@ if __name__ == '__main__':
             generations += 1
         # print 'iiiii'
         # 计算找到最优解的成功率
-        if min_cost==13:
+        # if min_cost==13:
+        if min_cost==Global.min_cost:
             rate += 1
         # 计算算法收敛到最优解的最小迭代次数的平均值
         location = len(best_fitnesses)-1
@@ -979,8 +987,8 @@ if __name__ == '__main__':
     print 'avg_iteration_time=',avg_iteration_time
 
     stdout = save_out
-    print 'rate=',rate
-    print 'avg_iteration_time=',avg_iteration_time
+    # print 'rate=',rate
+    # print 'avg_iteration_time=',avg_iteration_time
 
     # long running
     # endtime = clock()
