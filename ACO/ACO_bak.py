@@ -435,7 +435,7 @@ class Population:
             best_fitnesses.append(self.best_fitness)
             avg_fitnesses.append(self.avg_fitness)
             min_costs.append(self.best_cost)
-            self.ants = [Ant(obj_graph) for num in range(self.ant_num)]
+            self.ants = [Ant(self.graph) for num in range(self.ant_num)]
             generation += 1
             if generation > 0:
                 GlobalInfo.count = 1
