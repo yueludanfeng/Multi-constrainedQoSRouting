@@ -7,13 +7,13 @@ from operator import attrgetter
 from random import choice
 from random import random
 from random import sample
-from time import clock
-from sys import stdout
+from sys import argv
 
-save_out = stdout
+
+# save_out = stdout
 # 输出重定向至指定的文件中，便于查看
-file_obj = open('out.txt', 'w+')
-stdout = file_obj
+# file_obj = open('out.txt', 'w+')
+# stdout = file_obj
 
 
 class Graph:
@@ -107,6 +107,11 @@ class Global:
     # 协调系数 of calculate_fitness_old()
     k = 1000
     min_cost = 0
+    # 测试次数
+    LOOP_TIME = 1000
+    # LOOP_TIME = 1
+    # 每次循环次数
+    MAX_GENERATION = 100
 
 class Chromosome:
 
@@ -145,6 +150,7 @@ class Chromosome:
         #print 'cost=',total_cost
         return total_cost
 
+    # calculate_fitness_new
     def calculate_fitness(self, graph, delay_w):
         i = 0
         path_length = len(self.solution)
@@ -190,6 +196,7 @@ class Chromosome:
         #    #print '----delta_sum_delay>=0  ',(C-sum_cost) * np.math.log10(10+delta_sum_delay)
         #    self.fitness = (C-sum_cost) * np.math.log10(10+delta_sum_delay)
 
+    # calculate_fitness_old
     def calculate_fitness_old(self, graph, delay_w):
         i = 0
         path_length = len(self.solution)
@@ -881,6 +888,18 @@ class Population:
 
 
 if __name__ == '__main__':
+    param_len = len(argv)
+    if param_len !=4:
+        exit(0)
+    # new:coef   old:r
+    param1 = argv[1]
+    # Pc
+    param2 = argv[2]
+    # Pm
+    param3 = argv[3]
+    Global.coef = float(param1)
+    Global.pc   = float(param2)
+    Global.pm   = float(param3)
     # 图形初始化
     rate = 0
     avg_iteration_time = 0
@@ -904,9 +923,11 @@ if __name__ == '__main__':
     src = int(line[0])
     dst = int(line[1])
     pop_scale = int(line[2])
-    pc = float(line[3])
-    pm = float(line[4])
-    Global.pm = pm
+    # pc = float(line[3])
+    pc = Global.pc
+    # pm = float(line[4])
+    pm = Global.pm
+    # Global.pm = pm
     delay_w = int(line[5])
     Global.delay_w  = delay_w
     # (row_num, col_num, BandWidth, Delay, Cost)
@@ -920,15 +941,13 @@ if __name__ == '__main__':
     #print graph.cost
     # #print graph.bandwidth[0][1]
     # #print graph.cost[0][1]
-    TIME = 10000
     time = 0
-    while time < TIME:
+    while time < Global.LOOP_TIME:
         iter = 0
         population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
         pop_size = population.get_popsize()
         #print 'pop_size=', pop_size
         generations = 0
-        MAX_GENERATION = 100
         best_fitnesses = []
         avg_fitnesses = []
         min_costs = []
@@ -937,7 +956,7 @@ if __name__ == '__main__':
         sum_generation = 0
         ratio = 0
         population.calculate_fitness()
-        while generations < MAX_GENERATION:
+        while generations < Global.MAX_GENERATION:
             #print '--------------------generations=>>>>>', generations, '<<<<--------------'
             # 计算种群中所以个体的适应度值
             # population.calculate_fitness()
@@ -983,10 +1002,13 @@ if __name__ == '__main__':
         time += 1
     # print 'oooooo'
 
-    print 'rate=',rate
-    print 'avg_iteration_time=',avg_iteration_time
-
-    stdout = save_out
+    ration = rate * 100.0 / Global.LOOP_TIME
+    iter_time = avg_iteration_time * 1.0 / Global.LOOP_TIME
+    print 'rate=', ration
+    print 'avg_iteration_time=', iter_time
+    f = open("result_new","a+")
+    f.write(param1+"_"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
+    # stdout = save_out
     # print 'rate=',rate
     # print 'avg_iteration_time=',avg_iteration_time
 

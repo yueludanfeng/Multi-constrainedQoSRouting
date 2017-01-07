@@ -10,10 +10,10 @@ from random import sample
 from time import clock
 from sys import stdout
 
-save_out = stdout
+# save_out = stdout
 # 输出重定向至指定的文件中，便于查看
-file_obj = open('out.txt', 'w+')
-stdout = file_obj
+# file_obj = open('out.txt', 'w+')
+# stdout = file_obj
 
 
 class Graph:
@@ -107,6 +107,10 @@ class Global:
     # 协调系数 of calculate_fitness_old()
     k = 1000
     min_cost = 0
+    # 测试次数
+    LOOP_TIME = 1000
+    # 每次循环次数
+    MAX_GENERATION = 100
 
 class Chromosome:
 
@@ -920,15 +924,14 @@ if __name__ == '__main__':
     #print graph.cost
     # #print graph.bandwidth[0][1]
     # #print graph.cost[0][1]
-    TIME = 10000
+
     time = 0
-    while time < TIME:
+    while time < Global.LOOP_TIME:
         iter = 0
         population = Population(graph, src, dst, pop_scale, pc, pm, delay_w)
         pop_size = population.get_popsize()
         #print 'pop_size=', pop_size
         generations = 0
-        MAX_GENERATION = 100
         best_fitnesses = []
         avg_fitnesses = []
         min_costs = []
@@ -937,7 +940,7 @@ if __name__ == '__main__':
         sum_generation = 0
         ratio = 0
         population.calculate_fitness()
-        while generations < MAX_GENERATION:
+        while generations < Global.MAX_GENERATION:
             #print '--------------------generations=>>>>>', generations, '<<<<--------------'
             # 计算种群中所以个体的适应度值
             # population.calculate_fitness()
@@ -983,10 +986,10 @@ if __name__ == '__main__':
         time += 1
     # print 'oooooo'
 
-    print 'rate=',rate
-    print 'avg_iteration_time=',avg_iteration_time
+    print 'rate=',rate*100.0/Global.LOOP_TIME
+    print 'avg_iteration_time=',avg_iteration_time*1.0/Global.LOOP_TIME
 
-    stdout = save_out
+    # stdout = save_out
     # print 'rate=',rate
     # print 'avg_iteration_time=',avg_iteration_time
 

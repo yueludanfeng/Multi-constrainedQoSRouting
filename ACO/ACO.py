@@ -447,8 +447,8 @@ class Population:
 if __name__ == "__main__":
     # 读取文件中相关信息
     # fp = open("test03.txt","r")
-    fp = open("test03_new.txt","r")
-    # fp = open("test04.txt","r")
+    # fp = open("test03_new.txt","r")
+    fp = open("test04.txt","r")
     line = fp.readline().split()
     node_num = int(line[0])
     edge_num = int(line[1])

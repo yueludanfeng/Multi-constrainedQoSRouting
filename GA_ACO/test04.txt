@@ -1,4 +1,4 @@
-20 37
+20 47 27
 #src    dst     ant_num    dealy_w   Pc     Pm      pop_scale
 0       19         8       12       0.9   0.1       6
 0,2,12,4,16
