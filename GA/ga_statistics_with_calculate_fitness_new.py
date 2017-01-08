@@ -889,14 +889,19 @@ class Population:
 
 if __name__ == '__main__':
     param_len = len(argv)
-    if param_len !=4:
+    if param_len !=5:
         exit(0)
     # new:coef   old:r
     param1 = argv[1]
     # Pc
     param2 = argv[2]
+    # print "param2=",param2
+    # print "argv=",argv
+    # exit(0)
     # Pm
     param3 = argv[3]
+    # test_file
+    test_file = argv[4]
     Global.coef = float(param1)
     Global.pc   = float(param2)
     Global.pm   = float(param3)
@@ -907,7 +912,9 @@ if __name__ == '__main__':
     # f = open('test02.txt', 'r')
     # f = open('test03.txt', 'r')
     # 打开测试文件
-    f = open('test03_new.txt', 'r')
+    file_name = test_file +".txt"
+    f = open(file_name, "r")
+    # f = open('test03_new.txt', 'r')
     # f = open('test04.txt', 'r')
     line = f.readline().split()
     #print line
@@ -1006,7 +1013,9 @@ if __name__ == '__main__':
     iter_time = avg_iteration_time * 1.0 / Global.LOOP_TIME
     print 'rate=', ration
     print 'avg_iteration_time=', iter_time
-    f = open("result_new","a+")
+    # f = open("result_new","a+")
+    result_file_name = "./"+test_file+"/result_new"
+    f = open(result_file_name, "a+")
     f.write(param1+"\t"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
     # stdout = save_out
     # print 'rate=',rate

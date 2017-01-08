@@ -135,7 +135,7 @@ class GlobalInfo:
     # Q1 / delat_delay
     Q1 = 150.0
     # Q2 / delat_cost
-    Q2 = 15.0
+    Q2 = 150.0
     # 启发因子
     alpha = 1
     # 期望因子
@@ -147,7 +147,7 @@ class GlobalInfo:
     # 否则按照概率公式进行转移
     r = 0.1
     # 当delay>delay_w时，将其乘以一个系数
-    # GA算法中计算fitness时的系数 (对算法的收敛速度有影响)
+    # GA算法中计算ftness时的系数 (对算法的收敛速度有影响)
     coef = 3
     # pheromone[][] 全局信息素初始值
     C = 0.31
@@ -169,6 +169,9 @@ class GlobalInfo:
     punishment_coef = 0.7
     c1=0.8
     c2=1-c1
+    result = 0
+    # LOOP_TIME = 100
+    LOOP_TIME = 1
 
     @staticmethod
     def init_param(node_num, edge_num, src_node, dst_node,
@@ -197,6 +200,7 @@ class GlobalInfo:
         line = fp.readline().split()
         node_num = int(line[0])
         edge_num = int(line[1])
+        GlobalInfo.result = int(line[2])
         print 'node_num and edge_num: ', line
         fp.readline()
         line = fp.readline().split()
@@ -1202,67 +1206,92 @@ if __name__ == "__main__":
     # 根据读取的信息初始化Graph类和GlobalInfo类
     GlobalInfo.init_param(*info)
     population = Population()
-    population.init()
-    population.calculate_fitness()
-    population.solve()
+    time = 0
+    rate = 0
+    avg_iteration_time = 0
+    while time < GlobalInfo.LOOP_TIME:
+        population.init()
+        population.calculate_fitness()
+        population.solve()
 
-    print '================='
-    print 'Population.generations=',GlobalInfo.generations
-    print 'Population.best_fitnesses=', GlobalInfo.best_fitnesses
-    print 'Population.avg_fitnesses=', GlobalInfo.avg_fitnesses
-    print 'Population.min_costs=', GlobalInfo.min_costs
+        # print '================='
+        # print 'Population.generations=',GlobalInfo.generations
+        # print 'Population.best_fitnesses=', GlobalInfo.best_fitnesses
+        # print 'Population.avg_fitnesses=', GlobalInfo.avg_fitnesses
+        # print 'Population.min_costs=', GlobalInfo.min_costs
+        Transaction.convert_solutions_to_delta_of_pheromone()
+        ant_system = AntSystem()
+        # Population.generations += [i+GlobalInfo.STOP_TIME for i in range(GlobalInfo.ACO_MAX_GENERATION)]
+        # delta_generation = Population.generations.pop()
+        # Population.generations += [i+delta_generation+1 for i in range(GlobalInfo.ACO_MAX_GENERATION)]
+        ant_system.solve(GlobalInfo.best_fitnesses, GlobalInfo.avg_fitnesses,
+                         GlobalInfo.min_costs)
+        generation_length = len(GlobalInfo.best_fitnesses)
 
-    Transaction.convert_solutions_to_delta_of_pheromone()
-    ant_system = AntSystem()
-    # Population.generations += [i+GlobalInfo.STOP_TIME for i in range(GlobalInfo.ACO_MAX_GENERATION)]
-    # delta_generation = Population.generations.pop()
-    # Population.generations += [i+delta_generation+1 for i in range(GlobalInfo.ACO_MAX_GENERATION)]
-    ant_system.solve(GlobalInfo.best_fitnesses, GlobalInfo.avg_fitnesses,
-                     GlobalInfo.min_costs)
-    generation_length = len(GlobalInfo.best_fitnesses)
+        GlobalInfo.generations = [i for i in range(generation_length)]
+        # value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.pop_scale,GlobalInfo.Pc,
+        #          GlobalInfo.Pm, GlobalInfo.ant_num,GlobalInfo.alpha,GlobalInfo.beta, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
+        #          GlobalInfo.Q2, min(GlobalInfo.min_costs), GlobalInfo.best_delay,GlobalInfo.best_solution,GlobalInfo.STOP_TIME
+        #          )
+        # info = 'node_num=%d, edge_num=%d,pop_scale=%d,Pc=%.3f,Pm=%.3f, ant_num=%d,alpha=%d,beta=%d ' \
+        #        'rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, min_cost=%d, ' \
+        #        'best_delay=%d, best_solution=%s, stagnancy_time=%d' % value
+        min_cost = GlobalInfo.min_costs[-1]
+        if min_cost == GlobalInfo.result:
+            rate += 1
 
-    GlobalInfo.generations = [i for i in range(generation_length)]
-    value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.pop_scale,GlobalInfo.Pc,
-             GlobalInfo.Pm, GlobalInfo.ant_num,GlobalInfo.alpha,GlobalInfo.beta, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
-             GlobalInfo.Q2, min(GlobalInfo.min_costs), GlobalInfo.best_delay,GlobalInfo.best_solution,GlobalInfo.STOP_TIME
-             )
-    info = 'node_num=%d, edge_num=%d,pop_scale=%d,Pc=%.3f,Pm=%.3f, ant_num=%d,alpha=%d,beta=%d ' \
-           'rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, min_cost=%d, ' \
-           'best_delay=%d, best_solution=%s, stagnancy_time=%d' % value
-    pl.figure(info)
-    pl.subplot(211)
-    # pl.xlabel('generation')
-    pl.ylabel('fitness')
-    pl.plot(GlobalInfo.generations, GlobalInfo.best_fitnesses, 'r.-', label='best_fitness')
-    pl.plot(GlobalInfo.generations, GlobalInfo.avg_fitnesses, 'b.-', label='avg_fitness')
-    # pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
-    pl.legend(loc='lower right')
-    pl.grid()
-    xAxis = GlobalInfo.current_generation
-    yAxis = GlobalInfo.best_fitnesses[GlobalInfo.current_generation]
-    if yAxis > 10:
-        yAxis2 = yAxis - 5
-    else:
-        yAxis2 = yAxis + 5
-    xAxis2 = xAxis + 20
+        location = len(GlobalInfo.best_fitnesses) - 1
+        indexes = [i for i in range(location + 1)]
+        iter = 0
+        for index in indexes[-1:0:-1]:
+            if GlobalInfo.best_fitnesses[index] == GlobalInfo.best_fitnesses[index - 1]:
+                iter += 1
+            else:
+                break
+        iter_time = location - iter
+        avg_iteration_time += iter_time
+        time += 1
+    # output ration and iter_time
+    ration = rate * 100.0 / GlobalInfo.LOOP_TIME
+    iter_time = avg_iteration_time * 1.0 / GlobalInfo.LOOP_TIME
+    f = open("result","a+")
+    # specific params from GA and ACO
+    result = "some params "+str(ration)+"\t"+str(iter_time)+"\t"
+    f.write(result)
+    #pl.figure(info)
+    #pl.subplot(211)
+    ## pl.xlabel('generation')
+    #pl.ylabel('fitness')
+    #pl.plot(GlobalInfo.generations, GlobalInfo.best_fitnesses, 'r.-', label='best_fitness')
+    #pl.plot(GlobalInfo.generations, GlobalInfo.avg_fitnesses, 'b.-', label='avg_fitness')
+    ## pl.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    #pl.legend(loc='lower right')
+    #pl.grid()
+    #xAxis = GlobalInfo.current_generation
+    #yAxis = GlobalInfo.best_fitnesses[GlobalInfo.current_generation]
+    #if yAxis > 10:
+    #    yAxis2 = yAxis - 5
+    #else:
+    #    yAxis2 = yAxis + 5
+    #xAxis2 = xAxis + 20
     # pl.annotate('GA->ACO k=%s,switch_generation=%d' % (GlobalInfo.k,GlobalInfo.current_generation), xy=(xAxis, yAxis), xytext=(xAxis2, yAxis2), \
     #             arrowprops=dict(facecolor='green', shrink=0.1))
-    pl.subplot(212)
-    pl.xlabel('generation')
-    pl.ylabel('cost')
-    pl.plot(GlobalInfo.generations, GlobalInfo.min_costs, 'r.-', label='min_cost')
-    pl.grid()
-    pl.legend()
-    xAxis3 = xAxis
-    yAxis3 = GlobalInfo.min_costs[xAxis3]
-    xAxis4 = xAxis3
-    yAxis4 = yAxis3
-    pl.annotate('GA->ACO switch_generation=%d'%GlobalInfo.current_generation, xy=(xAxis3, yAxis3), xytext=(xAxis4, yAxis4), \
-                arrowprops=dict(facecolor='green', shrink=0.5))
-
-    pl.show()
-
-    # ant = Ant()
-    # print 'aaaaaaaa'
-    # ant.find_path()
-    # ant.update_pheromone()
+    #pl.subplot(212)
+    #pl.xlabel('generation')
+    #pl.ylabel('cost')
+    #pl.plot(GlobalInfo.generations, GlobalInfo.min_costs, 'r.-', label='min_cost')
+    #pl.grid()
+    #pl.legend()
+    #xAxis3 = xAxis
+    #yAxis3 = GlobalInfo.min_costs[xAxis3]
+    #xAxis4 = xAxis3
+    #yAxis4 = yAxis3
+    #pl.annotate('GA->ACO switch_generation=%d'%GlobalInfo.current_generation, xy=(xAxis3, yAxis3), xytext=(xAxis4, yAxis4), \
+    #            arrowprops=dict(facecolor='green', shrink=0.5))
+    #
+    #pl.show()
+    #
+    ## ant = Ant()
+    ## print 'aaaaaaaa'
+    ## ant.find_path()
+    ## ant.update_pheromone()

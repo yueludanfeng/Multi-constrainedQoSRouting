@@ -2,13 +2,14 @@
 # Author:   Lixinming
 # 融合了遗传算法和蚁群算法的混合算法
 # 关键在于如何融合：先遗传，在蚁群，蚁群算法的信息素初始值如何由遗传算法获得
+from math import log10
+from operator import attrgetter
 from random import choice
 from random import random
 from random import uniform
-from random import shuffle
-from operator import attrgetter
-from math import log10
+
 import matplotlib.pyplot as pl
+
 
 class Graph:
     def __init__(self, node_num, edge_num):
@@ -1224,12 +1225,12 @@ if __name__ == "__main__":
     GlobalInfo.generations = [i for i in range(generation_length)]
     value = (GlobalInfo.node_num, GlobalInfo.edge_num, GlobalInfo.pop_scale,GlobalInfo.Pc,
              GlobalInfo.Pm, GlobalInfo.ant_num,GlobalInfo.alpha,GlobalInfo.beta, GlobalInfo.rho, GlobalInfo.r, GlobalInfo.Q1,
-             GlobalInfo.Q2, min(GlobalInfo.min_costs), GlobalInfo.best_delay,GlobalInfo.best_solution,GlobalInfo.STOP_TIME
+             GlobalInfo.Q2, GlobalInfo.min_costs[-1], GlobalInfo.best_delay,GlobalInfo.best_solution,GlobalInfo.STOP_TIME
              )
-    info = 'node_num=%d, edge_num=%d,pop_scale=%d,Pc=%.3f,Pm=%.3f, ant_num=%d,alpha=%d,beta=%d ' \
+    output_info = 'node_num=%d, edge_num=%d,pop_scale=%d,Pc=%.3f,Pm=%.3f, ant_num=%d,alpha=%d,beta=%d ' \
            'rho=%.2f, r=%.2f,Q1=%.2f, Q2=%.2f, min_cost=%d, ' \
            'best_delay=%d, best_solution=%s, stagnancy_time=%d' % value
-    pl.figure(info)
+    pl.figure(output_info)
     pl.subplot(211)
     # pl.xlabel('generation')
     pl.ylabel('fitness')

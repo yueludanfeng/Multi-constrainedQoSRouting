@@ -888,7 +888,7 @@ class Population:
 
 if __name__ == '__main__':
     param_len = len(argv)
-    if param_len !=4:
+    if param_len !=5:
         exit(0)
     # new:coef   old:r
     param1 = argv[1]
@@ -896,8 +896,12 @@ if __name__ == '__main__':
     param2 = argv[2]
     # Pm
     param3 = argv[3]
+    # test_file
+    test_file = argv[4]
     Global.r  = float(param1)
     Global.pc = float(param2)
+    # print "param2=",param2
+    # exit(0)
     Global.pm = float(param3)
 
     # 图形初始化
@@ -1006,7 +1010,9 @@ if __name__ == '__main__':
     print 'avg_iteration_time=', iter_time
     result = param1+"\t"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n"
     print result
-    f = open("result_old", "a+")
+    # f = open("result_old", "a+")
+    result_file_name = "./"+test_file+"/result_old"
+    f = open(result_file_name, "a+")
     # f.write(param1+"\t"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
     f.write(result)
     # stdout = save_out
