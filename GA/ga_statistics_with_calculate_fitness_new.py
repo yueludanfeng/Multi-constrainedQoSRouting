@@ -1007,7 +1007,7 @@ if __name__ == '__main__':
     print 'rate=', ration
     print 'avg_iteration_time=', iter_time
     f = open("result_new","a+")
-    f.write(param1+"_"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
+    f.write(param1+"\t"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
     # stdout = save_out
     # print 'rate=',rate
     # print 'avg_iteration_time=',avg_iteration_time

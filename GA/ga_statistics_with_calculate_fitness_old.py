@@ -1004,8 +1004,11 @@ if __name__ == '__main__':
     iter_time = avg_iteration_time*1.0/Global.LOOP_TIME
     print 'rate=', ration
     print 'avg_iteration_time=', iter_time
+    result = param1+"\t"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n"
+    print result
     f = open("result_old", "a+")
-    f.write(param1+"_"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
+    # f.write(param1+"\t"+param2+"\t"+param3+"\t"+str(ration)+"\t"+str(iter_time)+"\n")
+    f.write(result)
     # stdout = save_out
 
     # print 'rate=',rate
