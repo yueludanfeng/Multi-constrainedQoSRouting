@@ -1,4 +1,4 @@
-This Project consists of files which contribute to solv multiple-constraints QoS route problem
+This Project consists of files which contribute to solving multiple-constraints QoS routing problem
 The Algorithms are as follows :
     GA(Genetic Algorithm)
     ACO(Ant Colony Optimization)
